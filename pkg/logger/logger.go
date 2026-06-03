@@ -6,6 +6,7 @@ import (
     "go.uber.org/zap"
     "go.uber.org/zap/zapcore"
     "io"
+    "os"
 )
 
 func New(level string) *zap.Logger {
@@ -42,10 +43,11 @@ func parseLevel(lvl string) zapcore.Level {
 // EchoZapAdapter adapts zap.SugaredLogger to echo.Logger interface.
 type EchoZapAdapter struct {
     sugared *zap.SugaredLogger
+    out     io.Writer
 }
 
-func (e *EchoZapAdapter) Output() io.Writer { return nil }
-func (e *EchoZapAdapter) SetOutput(w io.Writer) {}
+func (e *EchoZapAdapter) Output() io.Writer { return e.out }
+func (e *EchoZapAdapter) SetOutput(w io.Writer) { e.out = w }
 func (e *EchoZapAdapter) Prefix() string { return "" }
 func (e *EchoZapAdapter) SetPrefix(p string) {}
 func (e *EchoZapAdapter) Level() log.Lvl { return log.INFO }
@@ -53,7 +55,7 @@ func (e *EchoZapAdapter) SetLevel(v log.Lvl) {}
 func (e *EchoZapAdapter) SetHeader(h string) {}
 
 func NewEchoLogger(z *zap.Logger) echo.Logger {
-    return &EchoZapAdapter{sugared: z.Sugar()}
+    return &EchoZapAdapter{sugared: z.Sugar(), out: os.Stdout}
 }
 
 // Echo Logger methods implementation.

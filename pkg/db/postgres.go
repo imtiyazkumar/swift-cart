@@ -3,6 +3,7 @@ package db
 import (
     "context"
     "fmt"
+    "time"
     "github.com/yourorg/swiftkart/config"
     "github.com/jackc/pgx/v5/pgxpool"
     "go.uber.org/zap"
@@ -28,7 +29,7 @@ func NewPostgres(dsn string) (*PostgresDB, error) {
         return nil, fmt.Errorf("pgx parse dsn: %w", err)
     }
     // Enable automatic health check connections
-    cfg.HealthCheckPeriod = 0 // disable periodic health checks (we'll ping manually)
+    cfg.HealthCheckPeriod = time.Second * 10 // enable health checks
     pool, err := pgxpool.NewWithConfig(context.Background(), cfg)
     if err != nil {
         return nil, fmt.Errorf("pgx pool create: %w", err)

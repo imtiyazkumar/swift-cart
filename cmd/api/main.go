@@ -16,7 +16,10 @@ import (
     "github.com/yourorg/swiftkart/pkg/logger"
     "github.com/yourorg/swiftkart/pkg/db"
     "github.com/yourorg/swiftkart/pkg/redis"
-    "github.com/yourorg/swiftkart/pkg/middleware"
+    custommiddleware "github.com/yourorg/swiftkart/pkg/middleware"
+    "github.com/yourorg/swiftkart/internal/merchant"
+    "github.com/yourorg/swiftkart/internal/customer"
+    "github.com/yourorg/swiftkart/internal/order"
 )
 
 func main() {
@@ -55,7 +58,8 @@ func main() {
     e.Use(middleware.Logger())
     e.Use(middleware.TimeoutWithConfig(middleware.TimeoutConfig{Timeout: 30 * time.Second}))
     e.Use(custommiddleware.RequestLogger(logg))
-    e.Use(custommiddleware.ErrorHandler(logg))
+    // Rate limiting (60 requests per minute per IP)
+    e.Use(custommiddleware.NewRedisRateLimiter(rdb.Client, custommiddleware.RateLimiterConfig{Limit: 60, Period: time.Minute}))
 
     // Health endpoints
     e.GET("/healthz", healthHandler)
@@ -63,7 +67,25 @@ func main() {
 
     // API version group (placeholder)
     api := e.Group("/api/v1")
-    _ = api // future routes will be attached here
+    // Register Auth routes (if any)
+    // auth.RegisterRoutes(api, cfg, logg, pg)
+
+    // Initialise services
+    merchantSvc := merchant.NewService(merchant.NewPostgresRepo(pg.Pool, logg))
+    customerSvc := customer.NewService(customer.NewPostgresRepo(pg.Pool, logg))
+    orderSvc := order.NewService(order.NewPostgresRepo(pg.Pool, logg))
+
+    // Register Merchant routes
+    merchantGroup := api.Group("/merchant")
+    merchant.RegisterRoutes(merchantGroup, cfg, logg, merchantSvc)
+
+    // Register Customer routes
+    customerGroup := api.Group("/customer")
+    customer.RegisterRoutes(customerGroup, cfg, logg, customerSvc)
+
+    // Register Order routes
+    orderGroup := api.Group("/order")
+    order.RegisterRoutes(orderGroup, cfg, logg, orderSvc)
 
     // Start server with graceful shutdown
     go func() {
