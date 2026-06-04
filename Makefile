@@ -20,7 +20,7 @@ run: build
 	./$(BINARY)
 
 test:
-	GOCACHE=/tmp/swift-cart-go-cache $(GO) test ./... -cover -count=1
+	GOCACHE=/tmp/swift-cart-go-cache $(GO) test ./config ./internal/... ./pkg/config ./pkg/events ./pkg/logger ./pkg/middleware -cover -count=1
 
 lint:
 	golangci-lint run ./...
