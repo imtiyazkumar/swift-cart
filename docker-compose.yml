@@ -1,0 +1,32 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: swiftkart
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d swiftkart"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  api:
+    build: .
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      PORT: 8080
+      LOG_LEVEL: info
+      POSTGRES_DSN: postgres://postgres:postgres@postgres:5432/swiftkart?sslmode=disable
+      JWT_SECRET: change-me-in-production
+    ports:
+      - "8080:8080"
+
+volumes:
+  postgres-data:

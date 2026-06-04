@@ -27,6 +27,9 @@ go.work.sum
 # env file
 .env
 
+# Local project walkthrough notes
+docs/project-flow.md
+
 # Editor/IDE
 # .idea/
 # .vscode/

@@ -15,7 +15,7 @@ func RegisterRoutes(e *echo.Echo, cfg *config.Config, log *zap.Logger, dbPool *p
 	g.POST("/signup", SignUp(cfg, log, dbPool))
 	g.POST("/login", Login(cfg, log, dbPool))
 	g.POST("/refresh", Refresh(cfg, log))
-	g.GET("/me", Me(log, dbPool))
+	g.GET("/me", Me(log, dbPool), JWTMiddleware(cfg.JWTSecret, log))
 }
 
 // SignUp creates a new user.

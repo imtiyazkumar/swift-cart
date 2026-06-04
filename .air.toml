@@ -1,0 +1,13 @@
+root = "."
+tmp_dir = "tmp"
+
+[build]
+cmd = "go build -o ./tmp/swiftkart-api ./cmd/api"
+bin = "./tmp/swiftkart-api"
+delay = 1000
+exclude_dir = ["tmp", "vendor", ".git"]
+include_ext = ["go", "sql", "toml"]
+stop_on_error = true
+
+[log]
+time = true

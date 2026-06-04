@@ -9,7 +9,7 @@ GO := go
 # Build flags
 LDFLAGS := -s -w
 
-.PHONY: all build run test lint fmt tidy docker-build docker-up docker-down clean
+.PHONY: all build run test lint fmt tidy migrate dev docker-build docker-up docker-down clean
 
 all: build
 
@@ -20,7 +20,7 @@ run: build
 	./$(BINARY)
 
 test:
-	$(GO) test ./... -cover ./... -count=1
+	GOCACHE=/tmp/swift-cart-go-cache $(GO) test ./... -cover -count=1
 
 lint:
 	golangci-lint run ./...
@@ -30,6 +30,12 @@ fmt:
 
 tidy:
 	$(GO) mod tidy
+
+migrate:
+	GOCACHE=/tmp/swift-cart-go-cache $(GO) run ./cmd/migrate
+
+dev:
+	air
 
 docker-build:
 	docker build -t $(BINARY):latest .
