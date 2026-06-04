@@ -3,9 +3,9 @@ package auth
 import (
 	"net/http"
 
+	"github.com/imtiyazkumar/swiftkart/config"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/labstack/echo/v4"
-	"github.com/yourorg/swiftkart/config"
 	"go.uber.org/zap"
 )
 

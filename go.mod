@@ -1,4 +1,4 @@
-module github.com/yourorg/swiftkart
+module github.com/imtiyazkumar/swiftkart
 
 go 1.25.0
 

@@ -4,7 +4,7 @@ import (
 	"context"
 	"errors"
 
-	"github.com/yourorg/swiftkart/pkg/events"
+	"github.com/imtiyazkumar/swiftkart/pkg/events"
 )
 
 type Repository interface {

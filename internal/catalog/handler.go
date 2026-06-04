@@ -4,9 +4,9 @@ import (
 	"net/http"
 	"strconv"
 
+	"github.com/imtiyazkumar/swiftkart/config"
+	"github.com/imtiyazkumar/swiftkart/internal/common"
 	"github.com/labstack/echo/v4"
-	"github.com/yourorg/swiftkart/config"
-	"github.com/yourorg/swiftkart/internal/common"
 	"go.uber.org/zap"
 )
 

@@ -4,7 +4,7 @@ import (
 	"context"
 	"sync"
 
-	"github.com/yourorg/swiftkart/pkg/events"
+	"github.com/imtiyazkumar/swiftkart/pkg/events"
 )
 
 type Hub struct {

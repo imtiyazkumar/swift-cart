@@ -4,7 +4,7 @@ import (
 	"context"
 	"testing"
 
-	"github.com/yourorg/swiftkart/pkg/events"
+	"github.com/imtiyazkumar/swiftkart/pkg/events"
 )
 
 type fakeNotificationRepo struct {

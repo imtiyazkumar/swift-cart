@@ -3,8 +3,8 @@ package delivery
 import (
 	"net/http"
 
+	"github.com/imtiyazkumar/swiftkart/internal/common"
 	"github.com/labstack/echo/v4"
-	"github.com/yourorg/swiftkart/internal/common"
 )
 
 func RegisterRoutes(g *echo.Group, svc *Service) {

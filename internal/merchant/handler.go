@@ -1,10 +1,11 @@
 package merchant
 
 import (
-	"github.com/labstack/echo/v4"
-	"github.com/yourorg/swiftkart/config"
-	"go.uber.org/zap"
 	"net/http"
+
+	"github.com/imtiyazkumar/swiftkart/config"
+	"github.com/labstack/echo/v4"
+	"go.uber.org/zap"
 )
 
 // RegisterRoutes wires the merchant endpoints onto the provided Echo group.

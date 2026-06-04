@@ -5,7 +5,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/yourorg/swiftkart/pkg/events"
+	"github.com/imtiyazkumar/swiftkart/pkg/events"
 )
 
 func TestHubPublishesToSubscribedChannel(t *testing.T) {
