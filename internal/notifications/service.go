@@ -4,7 +4,7 @@ import (
 	"context"
 	"errors"
 
-	"github.com/imtiyazkumar/swiftkart/pkg/events"
+	"github.com/imtiyazkumar/yember-core/pkg/events"
 )
 
 type Repository interface {

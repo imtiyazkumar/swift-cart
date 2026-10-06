@@ -3,7 +3,7 @@ package payments
 import (
 	"net/http"
 
-	"github.com/imtiyazkumar/swiftkart/internal/common"
+	"github.com/imtiyazkumar/yember-core/internal/common"
 	"github.com/labstack/echo/v4"
 )
 

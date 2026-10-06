@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/imtiyazkumar/swiftkart/config"
+	"github.com/imtiyazkumar/yember-core/config"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"go.uber.org/zap"
 )

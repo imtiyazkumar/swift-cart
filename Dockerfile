@@ -9,11 +9,11 @@ RUN go mod download
 COPY . ./
 
 # Build the binary
-RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags "-s -w" -o /swiftkart-api ./cmd/api
+RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags "-s -w" -o /yember-core-api ./cmd/api
 
 # Final image
 FROM alpine:latest
 RUN apk --no-cache add ca-certificates
-COPY --from=builder /swiftkart-api /usr/local/bin/swiftkart-api
+COPY --from=builder /yember-core-api /usr/local/bin/yember-core-api
 EXPOSE 8080
-ENTRYPOINT ["swiftkart-api"]
+ENTRYPOINT ["yember-core-api"]

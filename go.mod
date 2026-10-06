@@ -1,4 +1,4 @@
-module github.com/imtiyazkumar/swiftkart
+module github.com/imtiyazkumar/yember-core
 
 go 1.25.0
 

@@ -20,13 +20,11 @@ func main() {
     }
     defer pool.Close()
 
-    // Drop if exists (ignore error)
-    _, _ = pool.Exec(context.Background(), "DROP DATABASE IF EXISTS swiftkart")
-    // Create fresh database
-    _, err = pool.Exec(context.Background(), "CREATE DATABASE swiftkart")
+    _, _ = pool.Exec(context.Background(), "DROP DATABASE IF EXISTS yember")
+    _, err = pool.Exec(context.Background(), "CREATE DATABASE yember")
     if err != nil {
         log.Fatalf("create database failed: %v", err)
     }
-    log.Println("swiftkart database reset successfully")
+    log.Println("yember database reset successfully")
     os.Exit(0)
 }

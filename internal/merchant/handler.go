@@ -3,7 +3,7 @@ package merchant
 import (
 	"net/http"
 
-	"github.com/imtiyazkumar/swiftkart/config"
+	"github.com/imtiyazkumar/yember-core/config"
 	"github.com/labstack/echo/v4"
 	"go.uber.org/zap"
 )

@@ -1,0 +1,89 @@
+{
+    "info": {
+        "_postman_id": "89ab1234-5678-4901-abcd-ef1234567890",
+        "name": "Yember Core API",
+        "description": "Postman Collection for Yember Core API platform serving Customer App, Rider App, Restaurant App, and Admin Web App.",
+        "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+    },
+    "item": [
+        {
+            "name": "Health",
+            "item": [
+                {
+                    "name": "Service Status Page",
+                    "request": {
+                        "method": "GET",
+                        "url": { "raw": "{{baseUrl}}/", "host": ["{{baseUrl}}"], "path": [""] }
+                    }
+                },
+                {
+                    "name": "Health Check",
+                    "request": {
+                        "method": "GET",
+                        "url": { "raw": "{{baseUrl}}/healthz", "host": ["{{baseUrl}}"], "path": ["healthz"] }
+                    }
+                },
+                {
+                    "name": "Readiness Check",
+                    "request": {
+                        "method": "GET",
+                        "url": { "raw": "{{baseUrl}}/readyz", "host": ["{{baseUrl}}"], "path": ["readyz"] }
+                    }
+                }
+            ]
+        },
+        {
+            "name": "Auth",
+            "item": [
+                {
+                    "name": "Sign Up",
+                    "request": {
+                        "method": "POST",
+                        "header": [{ "key": "Content-Type", "value": "application/json" }],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"email\": \"customer@yember.app\",\n  \"password\": \"Password123!\",\n  \"role\": \"CUSTOMER\"\n}"
+                        },
+                        "url": { "raw": "{{baseUrl}}/api/v1/auth/signup", "host": ["{{baseUrl}}"], "path": ["api", "v1", "auth", "signup"] }
+                    }
+                },
+                {
+                    "name": "Login",
+                    "request": {
+                        "method": "POST",
+                        "header": [{ "key": "Content-Type", "value": "application/json" }],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"email\": \"customer@yember.app\",\n  \"password\": \"Password123!\"\n}"
+                        },
+                        "url": { "raw": "{{baseUrl}}/api/v1/auth/login", "host": ["{{baseUrl}}"], "path": ["api", "v1", "auth", "login"] }
+                    }
+                }
+            ]
+        },
+        {
+            "name": "Customer App",
+            "item": [
+                {
+                    "name": "List Restaurants",
+                    "request": {
+                        "method": "GET",
+                        "url": { "raw": "{{baseUrl}}/api/v1/customer/restaurants?city=srinagar", "host": ["{{baseUrl}}"], "path": ["api", "v1", "customer", "restaurants"], "query": [{ "key": "city", "value": "srinagar" }] }
+                    }
+                },
+                {
+                    "name": "Validate Coupon",
+                    "request": {
+                        "method": "POST",
+                        "header": [{ "key": "Content-Type", "value": "application/json" }],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"code\": \"VALLEY20\",\n  \"amount\": 500\n}"
+                        },
+                        "url": { "raw": "{{baseUrl}}/api/v1/customer/coupons/validate", "host": ["{{baseUrl}}"], "path": ["api", "v1", "customer", "coupons", "validate"] }
+                    }
+                }
+            ]
+        }
+    ]
+}

@@ -1,84 +1,50 @@
-# SwiftKart API
+# Yember Core API
 
 Base path: `/api/v1`
 
-## Health
+## Health & Status
 
+- `GET /` (HTML platform status overview page)
 - `GET /healthz`
 - `GET /readyz`
 
-## Auth
+## Multi-Application API Endpoints
 
-- `POST /api/v1/auth/signup`
-- `POST /api/v1/auth/login`
-- `POST /api/v1/auth/refresh`
-- `GET /api/v1/auth/me`
+### 1. Auth & Session (`/api/v1/auth`)
+- `POST /signup` — Register user with role (`CUSTOMER`, `RESTAURANT_OWNER`, `DELIVERY_PARTNER`, `ADMIN`)
+- `POST /login` — Authenticate and receive JWT access token & refresh token
+- `POST /refresh` — Refresh access token
+- `GET /me` — Get current authenticated user profile
 
-## Customer
+### 2. Customer App (`/api/v1/customer`)
+- `GET /restaurants?city=srinagar&search=ahdoos` — List active restaurants with categorized menus
+- `GET /restaurants/:id` — Get restaurant detail & full menu
+- `POST /coupons/validate` — Validate coupon code (e.g. `VALLEY20`) and calculate discount
+- `GET /favorites` & `POST /favorites/toggle` — Manage saved favorite restaurants
+- `GET /orders/:id/track` — Active order tracking & rider live GPS location
+- `POST /reviews` — Submit order rating (1-5) and review comment
 
-- `POST /api/v1/customer/create`
-- `GET /api/v1/customer/:id`
-- `GET /api/v1/customer`
-- `PUT /api/v1/customer/:id`
-- `DELETE /api/v1/customer/:id`
+### 3. Rider App (`/api/v1/rider`)
+- `GET /profile` — Get rider profile and vehicle details
+- `PATCH /status` — Toggle status (`ONLINE`, `OFFLINE`, `BUSY`)
+- `POST /location` — Update live GPS location (`latitude`, `longitude`)
+- `GET /deliveries/available` — Fetch available delivery jobs
+- `POST /deliveries/:id/accept` — Accept delivery job assignment
+- `PATCH /deliveries/:id/status` — Update order delivery status (`PICKED_UP`, `OUT_FOR_DELIVERY`, `DELIVERED`)
+- `GET /earnings` — Fetch total deliveries, daily earnings, and tips
 
-## Merchant
+### 4. Restaurant App (`/api/v1/restaurant`)
+- `GET /profile` — Get restaurant profile and branch status
+- `PATCH /status` — Toggle store open/closed status
+- `GET /menu/categories` & `POST /menu/categories` — Menu category management
+- `POST /menu/items` & `PATCH /menu/items/:id/availability` — Menu item CRUD and in-stock toggle
+- `GET /orders` — Live store order stream/dashboard
+- `PATCH /orders/:id/status` — Update order status (`CONFIRMED`, `PREPARING`, `READY_FOR_PICKUP`)
+- `GET /analytics/daily` — Daily order count & revenue summary
 
-- `POST /api/v1/merchant/create`
-- `GET /api/v1/merchant/:id`
-- `GET /api/v1/merchant`
-- `PUT /api/v1/merchant/:id`
-- `DELETE /api/v1/merchant/:id`
-
-## Catalog
-
-- `POST /api/v1/catalog/categories`
-- `POST /api/v1/catalog/items`
-- `GET /api/v1/catalog/items?q=coffee&limit=25`
-- `GET /api/v1/catalog/items/:id`
-- `GET /api/v1/catalog/merchants/:merchant_id/items`
-- `PUT /api/v1/catalog/items/:id`
-
-Example item:
-
-```json
-{
-  "merchant_id": "merchant-uuid",
-  "category_id": "category-uuid",
-  "name": "Paneer Roll",
-  "description": "Generic catalog item, not a food-only menu entry",
-  "base_price": 14900,
-  "currency": "INR",
-  "is_vegetarian": true,
-  "inventory_tracked": false
-}
-```
-
-## Orders
-
-- `POST /api/v1/order/create`
-- `GET /api/v1/order/:id`
-- `GET /api/v1/order`
-- `PUT /api/v1/order/:id/status`
-- `DELETE /api/v1/order/:id`
-
-Order statuses: `CREATED`, `PAYMENT_PENDING`, `CONFIRMED`, `PREPARING`, `READY_FOR_PICKUP`, `PICKED_UP`, `OUT_FOR_DELIVERY`, `DELIVERED`, `CANCELLED`, `REFUNDED`.
-
-## Delivery
-
-- `POST /api/v1/delivery/partners/:id/online`
-- `POST /api/v1/delivery/partners/:id/offline`
-- `POST /api/v1/delivery/locations`
-- `POST /api/v1/delivery/assignments`
-
-## Payments
-
-- `POST /api/v1/payments/intents`
-
-## Development
-
-```bash
-make docker-up
-make migrate
-make run
-```
+### 5. Admin Web App (`/api/v1/admin`)
+- `GET /dashboard/stats` — Platform summary metrics (total users, total orders, total revenue)
+- `GET /users` & `PATCH /users/:id/role` — User listing & role assignment
+- `GET /merchants/pending` & `PATCH /merchants/:id/approval` — Merchant onboarding approval
+- `GET /riders/pending` & `PATCH /riders/:id/approval` — Rider onboarding approval
+- `GET /coupons`, `POST /coupons`, `DELETE /coupons/:id` — Coupon management

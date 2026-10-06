@@ -2,15 +2,15 @@ services:
   postgres:
     image: postgres:16-alpine
     environment:
-      POSTGRES_DB: swiftkart
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: ${POSTGRES_DB:-yember}
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}
     ports:
       - "5432:5432"
     volumes:
       - postgres-data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres -d swiftkart"]
+      test: ["CMD-SHELL", "pg_isready -U postgres -d yember"]
       interval: 5s
       timeout: 5s
       retries: 10
@@ -21,10 +21,10 @@ services:
       postgres:
         condition: service_healthy
     environment:
-      PORT: 8080
-      LOG_LEVEL: info
-      POSTGRES_DSN: postgres://postgres:postgres@postgres:5432/swiftkart?sslmode=disable
-      JWT_SECRET: change-me-in-production
+      PORT: ${PORT:-8080}
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+      POSTGRES_DSN: ${POSTGRES_DSN_DOCKER:?Set POSTGRES_DSN_DOCKER in .env}
+      JWT_SECRET: ${JWT_SECRET:?Set JWT_SECRET in .env}
     ports:
       - "8080:8080"
 

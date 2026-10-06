@@ -11,8 +11,8 @@ import (
 
 	"os"
 
-	"github.com/imtiyazkumar/swiftkart/config"
-	"github.com/imtiyazkumar/swiftkart/pkg/db"
+	"github.com/imtiyazkumar/yember-core/config"
+	"github.com/imtiyazkumar/yember-core/pkg/db"
 	"github.com/joho/godotenv"
 
 	"go.uber.org/zap"

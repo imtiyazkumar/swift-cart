@@ -4,8 +4,8 @@ import (
 	"net/http"
 	"strconv"
 
-	"github.com/imtiyazkumar/swiftkart/config"
-	"github.com/imtiyazkumar/swiftkart/internal/common"
+	"github.com/imtiyazkumar/yember-core/config"
+	"github.com/imtiyazkumar/yember-core/internal/common"
 	"github.com/labstack/echo/v4"
 	"go.uber.org/zap"
 )

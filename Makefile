@@ -1,7 +1,7 @@
 SHELL := /usr/bin/env bash
 
 # Binary name
-BINARY := swiftkart-api
+BINARY := yember-core-api
 
 # Go command
 GO := go
@@ -20,7 +20,7 @@ run: build
 	./$(BINARY)
 
 test:
-	GOCACHE=/tmp/swift-cart-go-cache $(GO) test ./config ./internal/... ./pkg/config ./pkg/events ./pkg/logger ./pkg/middleware -cover -count=1
+	GOCACHE=/tmp/yember-core-go-cache $(GO) test ./config ./internal/... ./pkg/config ./pkg/events ./pkg/logger ./pkg/middleware -cover -count=1
 
 lint:
 	golangci-lint run ./...
@@ -32,7 +32,7 @@ tidy:
 	$(GO) mod tidy
 
 migrate:
-	GOCACHE=/tmp/swift-cart-go-cache $(GO) run ./cmd/migrate
+	GOCACHE=/tmp/yember-core-go-cache $(GO) run ./cmd/migrate
 
 dev:
 	air

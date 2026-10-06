@@ -1,0 +1,726 @@
+{
+    "info": {
+        "_postman_id": "2f0ea0f2-71bc-49d5-b8b8-983281641229",
+        "name": "SwiftKart API",
+        "description": "Complete Postman collection for the SwiftKart API. Import this collection and SwiftKart Local.postman_environment.json, select the environment, then set baseUrl and authEmail/authPassword if needed. Start the API and PostgreSQL first. Only GET /api/v1/auth/me requires a bearer token; the other business endpoints are currently not JWT-protected by the server. Creation requests save returned IDs into environment variables where practical. The delivery API has no partner-creation route, so partnerId must refer to an existing delivery partner. Prices and payment amounts are represented as numeric values; currency defaults to INR in the service when omitted.",
+        "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+    },
+    "item": [
+        {
+            "name": "Service and Health",
+            "description": "Root status page and health endpoints. Readiness checks the PostgreSQL connection.",
+            "item": [
+                {
+                    "name": "Home page",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Accept",
+                                "value": "text/html"
+                            }
+                        ],
+                        "url": "{{baseUrl}}/",
+                        "description": "Returns the SwiftKart HTML service status page (200 text/html)."
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Liveness",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": "{{baseUrl}}/healthz",
+                        "description": "Process liveness check. Returns plain text OK with HTTP 200."
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Readiness",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": "{{baseUrl}}/readyz",
+                        "description": "Database readiness check. Returns READY with HTTP 200, or DB not ready with HTTP 503."
+                    },
+                    "response": []
+                }
+            ]
+        },
+        {
+            "name": "Authentication",
+            "description": "Signup and login return JWT tokens. Signup defaults role to customer when omitted. Only Get current user uses JWT middleware.",
+            "item": [
+                {
+                    "name": "Sign up",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"email\": \"{{authEmail}}\",\n  \"password\": \"{{authPassword}}\",\n  \"role\": \"customer\"\n}",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        },
+                        "url": "{{baseUrl}}/api/v1/auth/signup",
+                        "description": "Creates a user. email and password are required; role is optional and defaults to customer. Returns 201 with id, email, and role. The email must be unique."
+                    },
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "type": "text/javascript",
+                                "exec": [
+                                    "if (pm.response.code === 201) {",
+                                    "  const payload = pm.response.json();",
+                                    "  if (payload.id) pm.environment.set('authUserId', payload.id);",
+                                    "}"
+                                ]
+                            }
+                        }
+                    ],
+                    "response": []
+                },
+                {
+                    "name": "Log in",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"email\": \"{{authEmail}}\",\n  \"password\": \"{{authPassword}}\"\n}",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        },
+                        "url": "{{baseUrl}}/api/v1/auth/login",
+                        "description": "Authenticates a user. Returns 200 with access_token and refresh_token; invalid credentials return 401. Saves returned tokens into the selected Postman environment."
+                    },
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "type": "text/javascript",
+                                "exec": [
+                                    "if (pm.response.code === 200) {",
+                                    "  const payload = pm.response.json();",
+                                    "  if (payload.access_token) pm.environment.set('accessToken', payload.access_token);",
+                                    "  if (payload.refresh_token) pm.environment.set('refreshToken', payload.refresh_token);",
+                                    "}"
+                                ]
+                            }
+                        }
+                    ],
+                    "response": []
+                },
+                {
+                    "name": "Refresh access token",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"refresh_token\": \"{{refreshToken}}\"\n}",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        },
+                        "url": "{{baseUrl}}/api/v1/auth/refresh",
+                        "description": "Exchanges a valid refresh token for a new access_token. Returns 200; an invalid token returns 401. Saves the new access token to the selected environment."
+                    },
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "type": "text/javascript",
+                                "exec": [
+                                    "if (pm.response.code === 200) {",
+                                    "  const payload = pm.response.json();",
+                                    "  if (payload.access_token) pm.environment.set('accessToken', payload.access_token);",
+                                    "}"
+                                ]
+                            }
+                        }
+                    ],
+                    "response": []
+                },
+                {
+                    "name": "Get current user",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "auth": {
+                            "type": "bearer",
+                            "bearer": [
+                                {
+                                    "key": "token",
+                                    "value": "{{accessToken}}",
+                                    "type": "string"
+                                }
+                            ]
+                        },
+                        "url": "{{baseUrl}}/api/v1/auth/me",
+                        "description": "Returns the authenticated user profile. Requires Authorization: Bearer {{accessToken}}. Returns 200; absent or invalid tokens return 401."
+                    },
+                    "response": []
+                }
+            ]
+        },
+        {
+            "name": "Customers",
+            "description": "Customer CRUD. Create requires name and email. Create response stores customerId for the other requests.",
+            "item": [
+                {
+                    "name": "Create customer",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"name\": \"Asha Sharma\",\n  \"email\": \"customer@example.com\",\n  \"phone\": \"+919876543210\",\n  \"address\": \"12 Market Road, Bengaluru\"\n}",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        },
+                        "url": "{{baseUrl}}/api/v1/customer/create",
+                        "description": "Creates a customer. Required: name, email. Optional: phone, address. Returns 201 with the created customer."
+                    },
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "type": "text/javascript",
+                                "exec": [
+                                    "if (pm.response.code === 201) {",
+                                    "  const payload = pm.response.json();",
+                                    "  if (payload.id) pm.environment.set('customerId', payload.id);",
+                                    "}"
+                                ]
+                            }
+                        }
+                    ],
+                    "response": []
+                },
+                {
+                    "name": "List customers",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": "{{baseUrl}}/api/v1/customer/",
+                        "description": "Returns the customer list (200)."
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Get customer",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": "{{baseUrl}}/api/v1/customer/{{customerId}}",
+                        "description": "Fetches one customer by ID (200); unknown IDs return 404."
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Update customer",
+                    "request": {
+                        "method": "PUT",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"name\": \"Asha Sharma\",\n  \"email\": \"customer@example.com\",\n  \"phone\": \"+919876543210\",\n  \"address\": \"14 Market Road, Bengaluru\"\n}",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        },
+                        "url": "{{baseUrl}}/api/v1/customer/{{customerId}}",
+                        "description": "Replaces the supplied customer fields for the path ID. Returns 204 with no response body."
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Delete customer",
+                    "request": {
+                        "method": "DELETE",
+                        "header": [],
+                        "url": "{{baseUrl}}/api/v1/customer/{{customerId}}",
+                        "description": "Deletes the customer at customerId. Returns 204 with no response body."
+                    },
+                    "response": []
+                }
+            ]
+        },
+        {
+            "name": "Merchants",
+            "description": "Merchant CRUD. Create requires name and email. Merchant type defaults to RESTAURANT. Create response stores merchantId.",
+            "item": [
+                {
+                    "name": "Create merchant",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"name\": \"Green Basket\",\n  \"email\": \"merchant@example.com\",\n  \"phone\": \"+919876543211\",\n  \"merchant_type\": \"GROCERY\",\n  \"onboarding_status\": \"PROFILE_CREATED\",\n  \"approval_status\": \"PENDING\"\n}",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        },
+                        "url": "{{baseUrl}}/api/v1/merchant/create",
+                        "description": "Creates a merchant. Required: name, email. Optional: phone, merchant_type, onboarding_status, approval_status. Known merchant types include RESTAURANT, GROCERY, PHARMACY, PET_STORE, and FLOWER_SHOP. Returns 201."
+                    },
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "type": "text/javascript",
+                                "exec": [
+                                    "if (pm.response.code === 201) {",
+                                    "  const payload = pm.response.json();",
+                                    "  if (payload.id) pm.environment.set('merchantId', payload.id);",
+                                    "}"
+                                ]
+                            }
+                        }
+                    ],
+                    "response": []
+                },
+                {
+                    "name": "List merchants",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": "{{baseUrl}}/api/v1/merchant/",
+                        "description": "Returns the merchant list (200)."
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Get merchant",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": "{{baseUrl}}/api/v1/merchant/{{merchantId}}",
+                        "description": "Fetches one merchant by ID (200); unknown IDs return 404."
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Update merchant",
+                    "request": {
+                        "method": "PUT",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"name\": \"Green Basket\",\n  \"email\": \"merchant@example.com\",\n  \"phone\": \"+919876543211\",\n  \"merchant_type\": \"GROCERY\",\n  \"onboarding_status\": \"PROFILE_CREATED\",\n  \"approval_status\": \"PENDING\"\n}",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        },
+                        "url": "{{baseUrl}}/api/v1/merchant/{{merchantId}}",
+                        "description": "Updates the merchant identified by merchantId. Returns 204 with no response body."
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Delete merchant",
+                    "request": {
+                        "method": "DELETE",
+                        "header": [],
+                        "url": "{{baseUrl}}/api/v1/merchant/{{merchantId}}",
+                        "description": "Deletes the merchant at merchantId. Returns 204 with no response body."
+                    },
+                    "response": []
+                }
+            ]
+        },
+        {
+            "name": "Catalog",
+            "description": "Catalog categories and items. Create a merchant and category before creating an item. Item creation stores itemId; category creation stores categoryId.",
+            "item": [
+                {
+                    "name": "Create category",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"merchant_id\": \"{{merchantId}}\",\n  \"name\": \"Fresh produce\",\n  \"sort_order\": 1\n}",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        },
+                        "url": "{{baseUrl}}/api/v1/catalog/categories",
+                        "description": "Creates a category. Required: merchant_id and name. is_active is set true by the service. Returns 201."
+                    },
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "type": "text/javascript",
+                                "exec": [
+                                    "if (pm.response.code === 201) {",
+                                    "  const payload = pm.response.json();",
+                                    "  if (payload.id) pm.environment.set('categoryId', payload.id);",
+                                    "}"
+                                ]
+                            }
+                        }
+                    ],
+                    "response": []
+                },
+                {
+                    "name": "Create item",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"merchant_id\": \"{{merchantId}}\",\n  \"category_id\": \"{{categoryId}}\",\n  \"name\": \"Seasonal apples\",\n  \"description\": \"Crisp locally sourced apples\",\n  \"item_type\": \"STANDARD\",\n  \"is_vegetarian\": true,\n  \"base_price\": 14900,\n  \"currency\": \"INR\",\n  \"inventory_tracked\": false,\n  \"substitution_policy\": \"NONE\"\n}",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        },
+                        "url": "{{baseUrl}}/api/v1/catalog/items",
+                        "description": "Creates an item. Required: merchant_id, category_id, name. Optional defaults: item_type STANDARD, currency INR, substitution_policy NONE. base_price must not be negative. Returns 201. The catalog example uses base_price 14900."
+                    },
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "type": "text/javascript",
+                                "exec": [
+                                    "if (pm.response.code === 201) {",
+                                    "  const payload = pm.response.json();",
+                                    "  if (payload.id) pm.environment.set('itemId', payload.id);",
+                                    "}"
+                                ]
+                            }
+                        }
+                    ],
+                    "response": []
+                },
+                {
+                    "name": "Search items",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": "{{baseUrl}}/api/v1/catalog/items?q={{searchQuery}}&limit={{limit}}",
+                        "description": "Searches items by q with a maximum result limit. Both query parameters are optional; the example environment defaults to coffee and 25. Returns 200 with an array."
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Get item",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": "{{baseUrl}}/api/v1/catalog/items/{{itemId}}",
+                        "description": "Fetches a catalog item by ID (200); missing items return 404."
+                    },
+                    "response": []
+                },
+                {
+                    "name": "List merchant items",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": "{{baseUrl}}/api/v1/catalog/merchants/{{merchantId}}/items",
+                        "description": "Lists catalog items for the merchant ID in merchantId. Returns 200 with an array."
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Update item",
+                    "request": {
+                        "method": "PUT",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"merchant_id\": \"{{merchantId}}\",\n  \"category_id\": \"{{categoryId}}\",\n  \"name\": \"Seasonal apples\",\n  \"description\": \"Fresh crisp locally sourced apples\",\n  \"item_type\": \"STANDARD\",\n  \"is_vegetarian\": true,\n  \"base_price\": 15900,\n  \"currency\": \"INR\",\n  \"is_available\": true,\n  \"inventory_tracked\": false,\n  \"substitution_policy\": \"NONE\"\n}",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        },
+                        "url": "{{baseUrl}}/api/v1/catalog/items/{{itemId}}",
+                        "description": "Updates the item at itemId using the supplied Item fields. Returns 204 with no response body."
+                    },
+                    "response": []
+                }
+            ]
+        },
+        {
+            "name": "Orders",
+            "description": "Order creation requires merchant_id and customer_id. Create customer and merchant first. The create response stores orderId.",
+            "item": [
+                {
+                    "name": "Create order",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"merchant_id\": \"{{merchantId}}\",\n  \"customer_id\": \"{{customerId}}\",\n  \"total_price\": 14900\n}",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        },
+                        "url": "{{baseUrl}}/api/v1/order/create",
+                        "description": "Creates an order. Required: merchant_id and customer_id. The service assigns an ID, timestamps, and CREATED status. Returns 201."
+                    },
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "type": "text/javascript",
+                                "exec": [
+                                    "if (pm.response.code === 201) {",
+                                    "  const payload = pm.response.json();",
+                                    "  if (payload.id) pm.environment.set('orderId', payload.id);",
+                                    "}"
+                                ]
+                            }
+                        }
+                    ],
+                    "response": []
+                },
+                {
+                    "name": "List orders",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": "{{baseUrl}}/api/v1/order/",
+                        "description": "Returns the order list (200)."
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Get order",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": "{{baseUrl}}/api/v1/order/{{orderId}}",
+                        "description": "Fetches one order by ID (200); unknown IDs return 404."
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Update order status",
+                    "request": {
+                        "method": "PUT",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"status\": \"CONFIRMED\"\n}",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        },
+                        "url": "{{baseUrl}}/api/v1/order/{{orderId}}/status",
+                        "description": "Sets an order status. Accepted values: CREATED, PAYMENT_PENDING, CONFIRMED, PREPARING, READY_FOR_PICKUP, PICKED_UP, OUT_FOR_DELIVERY, DELIVERED, CANCELLED, REFUNDED. Returns 204; invalid statuses return 500 from the current handler."
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Delete order",
+                    "request": {
+                        "method": "DELETE",
+                        "header": [],
+                        "url": "{{baseUrl}}/api/v1/order/{{orderId}}",
+                        "description": "Deletes the order at orderId. Returns 204 with no response body."
+                    },
+                    "response": []
+                }
+            ]
+        },
+        {
+            "name": "Delivery",
+            "description": "Delivery operations use an existing delivery partner. There is no HTTP endpoint in this API for creating a partner; set partnerId in the environment to a provisioned partner ID before using partner routes.",
+            "item": [
+                {
+                    "name": "Set partner online",
+                    "request": {
+                        "method": "POST",
+                        "header": [],
+                        "url": "{{baseUrl}}/api/v1/delivery/partners/{{partnerId}}/online",
+                        "description": "Marks the existing partner online. Returns 204 with no response body. The partner ID must exist in the database."
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Set partner offline",
+                    "request": {
+                        "method": "POST",
+                        "header": [],
+                        "url": "{{baseUrl}}/api/v1/delivery/partners/{{partnerId}}/offline",
+                        "description": "Marks the existing partner offline. Returns 204 with no response body. The partner ID must exist in the database."
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Update partner location",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"partner_id\": \"{{partnerId}}\",\n  \"latitude\": 12.9716,\n  \"longitude\": 77.5946,\n  \"recorded_at\": \"2026-09-28T12:00:00Z\"\n}",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        },
+                        "url": "{{baseUrl}}/api/v1/delivery/locations",
+                        "description": "Stores a partner location. Required: partner_id. recorded_at defaults to current UTC time when omitted. Returns 202 with no response body."
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Assign order to partner",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"order_id\": \"{{orderId}}\",\n  \"partner_id\": \"{{partnerId}}\"\n}",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        },
+                        "url": "{{baseUrl}}/api/v1/delivery/assignments",
+                        "description": "Creates an order-partner assignment. Required: order_id and partner_id. Returns 201 with the assignment. Both records must exist."
+                    },
+                    "response": []
+                }
+            ]
+        },
+        {
+            "name": "Payments",
+            "description": "Create a payment intent for an existing order. The example uses defaults made explicit: RAZORPAY and UPI; currency defaults to INR.",
+            "item": [
+                {
+                    "name": "Create payment intent",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"order_id\": \"{{orderId}}\",\n  \"provider\": \"RAZORPAY\",\n  \"method\": \"UPI\",\n  \"amount\": 14900,\n  \"currency\": \"INR\",\n  \"idempotency_key\": \"swiftkart-{{orderId}}-payment-1\"\n}",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        },
+                        "url": "{{baseUrl}}/api/v1/payments/intents",
+                        "description": "Creates a payment intent. Required: order_id and positive amount. provider defaults to RAZORPAY, method to UPI, and currency to INR. Returns 201 with the created intent. The order must exist."
+                    },
+                    "response": []
+                }
+            ]
+        }
+    ]
+}

@@ -33,6 +33,43 @@ func (f *fakeCustomerRepo) DeleteCustomer(ctx context.Context, id string) error 
 	return nil
 }
 
+func (f *fakeCustomerRepo) ListRestaurants(ctx context.Context, city, search string) ([]*Restaurant, error) {
+	return []*Restaurant{{ID: "rest-1", Name: "Ahdoos"}}, nil
+}
+
+func (f *fakeCustomerRepo) GetRestaurantByID(ctx context.Context, id string) (*Restaurant, error) {
+	return &Restaurant{ID: id, Name: "Ahdoos"}, nil
+}
+
+func (f *fakeCustomerRepo) ToggleFavorite(ctx context.Context, customerID, merchantID string) (bool, error) {
+	return true, nil
+}
+
+func (f *fakeCustomerRepo) GetFavorites(ctx context.Context, customerID string) ([]string, error) {
+	return []string{"rest-1"}, nil
+}
+
+func (f *fakeCustomerRepo) ValidateCoupon(ctx context.Context, code string, orderAmount int64) (*Coupon, int64, error) {
+	return &Coupon{Code: "VALLEY20", DiscountType: "PERCENTAGE", DiscountValue: 20}, 200, nil
+}
+
+func (f *fakeCustomerRepo) SubmitReview(ctx context.Context, customerID string, req *ReviewRequest) error {
+	return nil
+}
+
+func (f *fakeCustomerRepo) GetOrderTracking(ctx context.Context, orderID string) (*OrderTracking, error) {
+	return &OrderTracking{OrderID: orderID, Status: "OUT_FOR_DELIVERY"}, nil
+}
+
+func (f *fakeCustomerRepo) GetNotifications(ctx context.Context, customerID string) ([]*NotificationItem, error) {
+	return []*NotificationItem{{ID: "1", Title: "Test"}}, nil
+}
+
+func (f *fakeCustomerRepo) AddAddress(ctx context.Context, customerID, label, addressLine1, city, state, postalCode string) error {
+	return nil
+}
+
+
 func TestCreateCustomerRequiresNameAndEmail(t *testing.T) {
 	svc := NewService(&fakeCustomerRepo{})
 
