@@ -34,16 +34,17 @@ func (r *pgRepo) CreateCategory(ctx context.Context, c *Category) error {
 
 func (r *pgRepo) CreateItem(ctx context.Context, i *Item) error {
 	query := `INSERT INTO catalog.items
-		(merchant_id, category_id, name, description, item_type, is_vegetarian, base_price, currency, is_available, inventory_tracked, substitution_policy)
-		VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)
+		(merchant_id, category_id, name, description, item_type, is_vegetarian, base_price, currency, is_available, inventory_tracked, substitution_policy, metadata)
+		VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,
+			CASE WHEN $12::text = '' THEN '{}'::jsonb ELSE jsonb_build_object('image_url', $12::text) END)
 		RETURNING id, created_at, updated_at`
-	return r.db.QueryRow(ctx, query, i.MerchantID, i.CategoryID, i.Name, i.Description, i.ItemType, i.IsVegetarian, i.BasePrice, i.Currency, i.IsAvailable, i.InventoryTracked, i.SubstitutionPolicy).Scan(&i.ID, &i.CreatedAt, &i.UpdatedAt)
+	return r.db.QueryRow(ctx, query, i.MerchantID, i.CategoryID, i.Name, i.Description, i.ItemType, i.IsVegetarian, i.BasePrice, i.Currency, i.IsAvailable, i.InventoryTracked, i.SubstitutionPolicy, i.ImageURL).Scan(&i.ID, &i.CreatedAt, &i.UpdatedAt)
 }
 
 func (r *pgRepo) GetItem(ctx context.Context, id string) (*Item, error) {
 	item := &Item{}
 	err := r.db.QueryRow(ctx, itemSelect()+` WHERE id=$1 AND deleted_at IS NULL`, id).Scan(
-		&item.ID, &item.MerchantID, &item.CategoryID, &item.Name, &item.Description, &item.ItemType, &item.IsVegetarian,
+		&item.ID, &item.MerchantID, &item.CategoryID, &item.Name, &item.Description, &item.ImageURL, &item.ItemType, &item.IsVegetarian,
 		&item.BasePrice, &item.Currency, &item.IsAvailable, &item.InventoryTracked, &item.SubstitutionPolicy, &item.CreatedAt, &item.UpdatedAt,
 	)
 	if err == pgx.ErrNoRows {
@@ -75,14 +76,16 @@ func (r *pgRepo) SearchItems(ctx context.Context, query string, limit int) ([]*I
 
 func (r *pgRepo) UpdateItem(ctx context.Context, i *Item) error {
 	query := `UPDATE catalog.items SET category_id=$1, name=$2, description=$3, item_type=$4, is_vegetarian=$5,
-		base_price=$6, currency=$7, is_available=$8, inventory_tracked=$9, substitution_policy=$10, updated_at=now()
-		WHERE id=$11 AND deleted_at IS NULL`
-	_, err := r.db.Exec(ctx, query, i.CategoryID, i.Name, i.Description, i.ItemType, i.IsVegetarian, i.BasePrice, i.Currency, i.IsAvailable, i.InventoryTracked, i.SubstitutionPolicy, i.ID)
+		base_price=$6, currency=$7, is_available=$8, inventory_tracked=$9, substitution_policy=$10,
+		metadata=CASE WHEN $11::text = '' THEN metadata ELSE COALESCE(metadata, '{}'::jsonb) || jsonb_build_object('image_url', $11::text) END,
+		updated_at=now()
+		WHERE id=$12 AND deleted_at IS NULL`
+	_, err := r.db.Exec(ctx, query, i.CategoryID, i.Name, i.Description, i.ItemType, i.IsVegetarian, i.BasePrice, i.Currency, i.IsAvailable, i.InventoryTracked, i.SubstitutionPolicy, i.ImageURL, i.ID)
 	return err
 }
 
 func itemSelect() string {
-	return `SELECT id, merchant_id, category_id, name, description, item_type, is_vegetarian,
+	return `SELECT id, merchant_id, category_id, name, description, COALESCE(metadata->>'image_url', ''), item_type, is_vegetarian,
 		base_price, currency, is_available, inventory_tracked, substitution_policy, created_at, updated_at FROM catalog.items`
 }
 
@@ -90,7 +93,7 @@ func scanItems(rows pgx.Rows) ([]*Item, error) {
 	var items []*Item
 	for rows.Next() {
 		item := &Item{}
-		if err := rows.Scan(&item.ID, &item.MerchantID, &item.CategoryID, &item.Name, &item.Description, &item.ItemType, &item.IsVegetarian, &item.BasePrice, &item.Currency, &item.IsAvailable, &item.InventoryTracked, &item.SubstitutionPolicy, &item.CreatedAt, &item.UpdatedAt); err != nil {
+		if err := rows.Scan(&item.ID, &item.MerchantID, &item.CategoryID, &item.Name, &item.Description, &item.ImageURL, &item.ItemType, &item.IsVegetarian, &item.BasePrice, &item.Currency, &item.IsAvailable, &item.InventoryTracked, &item.SubstitutionPolicy, &item.CreatedAt, &item.UpdatedAt); err != nil {
 			return nil, err
 		}
 		items = append(items, item)

@@ -57,7 +57,7 @@ func (f *fakeCustomerRepo) SubmitReview(ctx context.Context, customerID string, 
 	return nil
 }
 
-func (f *fakeCustomerRepo) GetOrderTracking(ctx context.Context, orderID string) (*OrderTracking, error) {
+func (f *fakeCustomerRepo) GetOrderTracking(ctx context.Context, customerID, orderID string) (*OrderTracking, error) {
 	return &OrderTracking{OrderID: orderID, Status: "OUT_FOR_DELIVERY"}, nil
 }
 
@@ -69,6 +69,9 @@ func (f *fakeCustomerRepo) AddAddress(ctx context.Context, customerID, label, ad
 	return nil
 }
 
+func (f *fakeCustomerRepo) ListAddresses(ctx context.Context, customerID string) ([]map[string]string, error) {
+	return nil, nil
+}
 
 func TestCreateCustomerRequiresNameAndEmail(t *testing.T) {
 	svc := NewService(&fakeCustomerRepo{})

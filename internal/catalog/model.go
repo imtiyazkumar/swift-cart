@@ -26,6 +26,7 @@ type Item struct {
 	CategoryID         string    `json:"category_id"`
 	Name               string    `json:"name"`
 	Description        string    `json:"description"`
+	ImageURL           string    `json:"image_url,omitempty"`
 	ItemType           string    `json:"item_type"`
 	IsVegetarian       *bool     `json:"is_vegetarian,omitempty"`
 	BasePrice          int64     `json:"base_price"`

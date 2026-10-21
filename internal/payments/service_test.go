@@ -9,7 +9,7 @@ type fakePaymentRepo struct {
 	intent *Intent
 }
 
-func (f *fakePaymentRepo) CreateIntent(ctx context.Context, intent *Intent) error {
+func (f *fakePaymentRepo) CreateIntent(ctx context.Context, customerID string, intent *Intent) error {
 	f.intent = intent
 	intent.ID = "payment-1"
 	return nil
@@ -23,7 +23,7 @@ func TestCreateIntentAppliesDefaults(t *testing.T) {
 	repo := &fakePaymentRepo{}
 	svc := NewService(repo)
 
-	intent, err := svc.CreateIntent(context.Background(), &Intent{OrderID: "order-1", Amount: 14900})
+	intent, err := svc.CreateIntent(context.Background(), "customer-1", &Intent{OrderID: "order-1", Amount: 14900})
 	if err != nil {
 		t.Fatalf("create intent failed: %v", err)
 	}
@@ -38,7 +38,7 @@ func TestCreateIntentAppliesDefaults(t *testing.T) {
 func TestCreateIntentRequiresPositiveAmount(t *testing.T) {
 	svc := NewService(&fakePaymentRepo{})
 
-	if _, err := svc.CreateIntent(context.Background(), &Intent{OrderID: "order-1"}); err == nil {
+	if _, err := svc.CreateIntent(context.Background(), "customer-1", &Intent{OrderID: "order-1"}); err == nil {
 		t.Fatal("expected amount validation error")
 	}
 }

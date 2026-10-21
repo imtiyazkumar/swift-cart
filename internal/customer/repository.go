@@ -17,13 +17,13 @@ type Repository interface {
     // Ecosystem Restaurant & Discovery Methods
     ListRestaurants(ctx context.Context, city, search string) ([]*Restaurant, error)
     GetRestaurantByID(ctx context.Context, id string) (*Restaurant, error)
-    
+
     // Favorites & Coupons & Reviews & Notifications
     ToggleFavorite(ctx context.Context, customerID, merchantID string) (bool, error)
     GetFavorites(ctx context.Context, customerID string) ([]string, error)
     ValidateCoupon(ctx context.Context, code string, orderAmount int64) (*Coupon, int64, error)
     SubmitReview(ctx context.Context, customerID string, req *ReviewRequest) error
-    GetOrderTracking(ctx context.Context, orderID string) (*OrderTracking, error)
+    GetOrderTracking(ctx context.Context, customerID, orderID string) (*OrderTracking, error)
     GetNotifications(ctx context.Context, customerID string) ([]*NotificationItem, error)
     AddAddress(ctx context.Context, customerID, label, addressLine1, city, state, postalCode string) error
     ListAddresses(ctx context.Context, customerID string) ([]map[string]string, error)
@@ -78,39 +78,46 @@ func (r *pgRepo) ListCustomers(ctx context.Context) ([]*Customer, error) {
 }
 
 func (r *pgRepo) UpdateCustomer(ctx context.Context, c *Customer) error {
-    if c.Email != "" {
-        var existingID string
-        err := r.db.QueryRow(ctx, `SELECT id FROM public.users WHERE LOWER(email) = LOWER($1) AND id != $2 AND deleted_at IS NULL`, c.Email, c.ID).Scan(&existingID)
-        if err == nil && existingID != "" {
-            return fmt.Errorf("the email address '%s' is already registered to another account", c.Email)
-        }
+    tx, err := r.db.Begin(ctx)
+    if err != nil {
+        return err
     }
-
-    if c.Phone != "" {
-        var existingID string
-        err := r.db.QueryRow(ctx, `SELECT id FROM public.users WHERE phone = $1 AND id != $2 AND deleted_at IS NULL`, c.Phone, c.ID).Scan(&existingID)
-        if err == nil && existingID != "" {
-            return fmt.Errorf("the mobile number '%s' is already registered to another account", c.Phone)
-        }
+    defer tx.Rollback(ctx)
+    ct, err := tx.Exec(ctx, `UPDATE public.users SET full_name=$1, gender=$2, updated_at=NOW() WHERE id=$3 AND deleted_at IS NULL`, c.Name, c.Gender, c.ID)
+    if err != nil {
+        return err
     }
-
-    queryUsers := `UPDATE public.users SET full_name=$1, gender=$2, email=NULLIF($3, ''), phone=NULLIF($4, ''), updated_at=NOW() WHERE id=$5`
-    _, _ = r.db.Exec(ctx, queryUsers, c.Name, c.Gender, c.Email, c.Phone, c.ID)
-
-    queryCust := `UPDATE public.customers SET name=$1, gender=$2, email=NULLIF($3, ''), phone=NULLIF($4, ''), updated_at=NOW() WHERE id=$5`
-    _, err := r.db.Exec(ctx, queryCust, c.Name, c.Gender, c.Email, c.Phone, c.ID)
-    return err
+    if ct.RowsAffected() == 0 {
+        return fmt.Errorf("user not found")
+    }
+    ct, err = tx.Exec(ctx, `UPDATE public.customers SET name=$1, gender=$2, updated_at=NOW() WHERE id=$3`, c.Name, c.Gender, c.ID)
+    if err != nil {
+        return err
+    }
+    if ct.RowsAffected() == 0 {
+        return fmt.Errorf("customer profile not found")
+    }
+    return tx.Commit(ctx)
 }
 
 func (r *pgRepo) AddAddress(ctx context.Context, customerID, label, addressLine1, city, state, postalCode string) error {
+    tx, err := r.db.Begin(ctx)
+    if err != nil {
+        return err
+    }
+    defer tx.Rollback(ctx)
     queryAddr := `INSERT INTO users.customer_addresses (customer_id, label, address_line1, city, state, postal_code, created_at, updated_at)
         VALUES ($1, $2, $3, $4, $5, $6, NOW(), NOW())`
-    _, _ = r.db.Exec(ctx, queryAddr, customerID, label, addressLine1, city, state, postalCode)
+    if _, err = tx.Exec(ctx, queryAddr, customerID, label, addressLine1, city, state, postalCode); err != nil {
+        return err
+    }
 
     fullAddress := fmt.Sprintf("%s, %s, %s %s", addressLine1, city, state, postalCode)
     queryCust := `UPDATE public.customers SET address=$1, updated_at=NOW() WHERE id=$2`
-    _, err := r.db.Exec(ctx, queryCust, fullAddress, customerID)
-    return err
+    if _, err = tx.Exec(ctx, queryCust, fullAddress, customerID); err != nil {
+        return err
+    }
+    return tx.Commit(ctx)
 }
 
 func (r *pgRepo) ListAddresses(ctx context.Context, customerID string) ([]map[string]string, error) {
@@ -155,19 +162,18 @@ func (r *pgRepo) DeleteCustomer(ctx context.Context, id string) error {
 
 func (r *pgRepo) ListRestaurants(ctx context.Context, city, search string) ([]*Restaurant, error) {
     query := `
-        SELECT m.id, m.name, COALESCE(array_to_string(m.tags, ', '), 'Kashmiri') as cuisine,
-               '4.8' as rating, '250+' as reviews, '25-35 min' as time, '2.4 km' as distance,
-               '₹40 delivery' as fee, '20% OFF' as offer,
-               'https://images.unsplash.com/photo-1555396273-367ea4eb4db5?w=800' as image,
-               '#e9785c' as accent
+        SELECT m.id, m.name, COALESCE(array_to_string(m.tags, ', '), '') as cuisine,
+               COALESCE((SELECT round(avg(rating),1)::text FROM merchants.restaurant_reviews WHERE merchant_id=m.id AND hidden_at IS NULL),'') as rating, (SELECT count(*)::text FROM merchants.restaurant_reviews WHERE merchant_id=m.id AND hidden_at IS NULL) as reviews, '' as time, '' as distance,
+               '' as fee, '' as offer, '' as image, '' as accent
         FROM public.merchants m
-        WHERE m.is_active = true
+        WHERE m.is_active = true AND m.approval_status='APPROVED' AND m.fee_payment_status='PAID' AND m.deleted_at IS NULL
     `
-    if search != "" {
-        query += fmt.Sprintf(" AND m.name ILIKE '%%%s%%'", search)
-    }
-
-    rows, err := r.db.Query(ctx, query)
+    query += ` AND ($1 = '' OR m.name ILIKE '%' || $1 || '%' OR EXISTS (
+        SELECT 1 FROM catalog.items i
+        WHERE i.merchant_id = m.id AND i.is_available = true AND i.deleted_at IS NULL
+        AND i.name ILIKE '%' || $1 || '%'
+    ))`
+    rows, err := r.db.Query(ctx, query, search)
     if err != nil {
         return nil, err
     }
@@ -198,13 +204,11 @@ func (r *pgRepo) ListRestaurants(ctx context.Context, city, search string) ([]*R
 
 func (r *pgRepo) GetRestaurantByID(ctx context.Context, id string) (*Restaurant, error) {
     query := `
-        SELECT m.id, m.name, COALESCE(array_to_string(m.tags, ', '), 'Kashmiri') as cuisine,
-               '4.8' as rating, '250+' as reviews, '25-35 min' as time, '2.4 km' as distance,
-               '₹40 delivery' as fee, '20% OFF' as offer,
-               'https://images.unsplash.com/photo-1555396273-367ea4eb4db5?w=800' as image,
-               '#e9785c' as accent
+        SELECT m.id, m.name, COALESCE(array_to_string(m.tags, ', '), '') as cuisine,
+               COALESCE((SELECT round(avg(rating),1)::text FROM merchants.restaurant_reviews WHERE merchant_id=m.id AND hidden_at IS NULL),'') as rating, (SELECT count(*)::text FROM merchants.restaurant_reviews WHERE merchant_id=m.id AND hidden_at IS NULL) as reviews, '' as time, '' as distance,
+               '' as fee, '' as offer, '' as image, '' as accent
         FROM public.merchants m
-        WHERE m.id = $1 AND m.is_active = true
+        WHERE m.id = $1 AND m.is_active = true AND m.approval_status='APPROVED' AND m.fee_payment_status='PAID' AND m.deleted_at IS NULL
     `
     var rest Restaurant
     err := r.db.QueryRow(ctx, query, id).Scan(
@@ -229,8 +233,7 @@ func (r *pgRepo) getMenuForMerchant(ctx context.Context, merchantID string) ([]M
     query := `
         SELECT i.id, i.name, i.description, (i.base_price / 100.0) as price,
                COALESCE(i.is_vegetarian, false) as is_veg,
-               'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=600' as image,
-               'Bestseller' as tag
+               COALESCE(i.metadata->>'image_url', '') as image, '' as tag
         FROM catalog.items i
         WHERE i.merchant_id = $1 AND i.is_available = true AND i.deleted_at IS NULL
     `
@@ -247,8 +250,6 @@ func (r *pgRepo) getMenuForMerchant(ctx context.Context, merchantID string) ([]M
         if err != nil {
             return nil, err
         }
-        item.Rating = "4.9"
-        item.Reviews = "(120)"
         menu = append(menu, item)
     }
     return menu, rows.Err()
@@ -323,10 +324,15 @@ func (r *pgRepo) ValidateCoupon(ctx context.Context, code string, orderAmount in
 }
 
 func (r *pgRepo) SubmitReview(ctx context.Context, customerID string, req *ReviewRequest) error {
+    tx, err := r.db.Begin(ctx)
+    if err != nil {
+        return err
+    }
+    defer tx.Rollback(ctx)
     // Get merchant_id from order
     var merchantID string
-    query := `SELECT merchant_id FROM public.orders WHERE id = $1`
-    err := r.db.QueryRow(ctx, query, req.OrderID).Scan(&merchantID)
+    query := `SELECT merchant_id FROM public.orders WHERE id = $1 AND customer_id = $2 AND status='DELIVERED' FOR UPDATE`
+    err = tx.QueryRow(ctx, query, req.OrderID, customerID).Scan(&merchantID)
     if err != nil {
         return fmt.Errorf("order not found: %w", err)
     }
@@ -335,26 +341,38 @@ func (r *pgRepo) SubmitReview(ctx context.Context, customerID string, req *Revie
         INSERT INTO merchants.restaurant_reviews (order_id, customer_id, merchant_id, rating, comment)
         VALUES ($1, $2, $3, $4, $5)
     `
-    _, err = r.db.Exec(ctx, insertQuery, req.OrderID, customerID, merchantID, req.Rating, req.Comment)
-    return err
+    _, err = tx.Exec(ctx, insertQuery, req.OrderID, customerID, merchantID, req.Rating, req.Comment)
+    if err != nil {
+        return fmt.Errorf("review already submitted or invalid")
+    }
+    if req.DeliveryRating > 0 {
+        tag, err := tx.Exec(ctx, `INSERT INTO delivery.partner_ratings(order_id,partner_id,customer_id,rating) SELECT order_id,partner_id,$2,$3 FROM delivery.delivery_assignments WHERE order_id=$1 AND status='DELIVERED'`, req.OrderID, customerID, req.DeliveryRating)
+        if err != nil {
+            return err
+        }
+        if tag.RowsAffected() != 1 {
+            return fmt.Errorf("completed delivery required for partner rating")
+        }
+    }
+    return tx.Commit(ctx)
 }
 
-func (r *pgRepo) GetOrderTracking(ctx context.Context, orderID string) (*OrderTracking, error) {
+func (r *pgRepo) GetOrderTracking(ctx context.Context, customerID, orderID string) (*OrderTracking, error) {
     query := `
         SELECT o.id, o.status, m.name, mb.address,
                COALESCE(dp.name, 'Assigning rider...'), COALESCE(dp.phone, ''),
-               COALESCE(ll.latitude, 34.0730), COALESCE(ll.longitude, 74.8115),
-               25 as estimated_minutes, o.updated_at
+               COALESCE(ll.latitude, 0), COALESCE(ll.longitude, 0),
+               0 as estimated_minutes, o.updated_at
         FROM public.orders o
         JOIN public.merchants m ON o.merchant_id = m.id
         LEFT JOIN merchants.merchant_branches mb ON m.id = mb.merchant_id
         LEFT JOIN delivery.delivery_assignments da ON o.id = da.order_id
         LEFT JOIN delivery.delivery_partners dp ON da.partner_id = dp.id
         LEFT JOIN delivery.live_locations ll ON dp.id = ll.partner_id
-        WHERE o.id = $1
+        WHERE o.customer_id = $1 AND o.id = $2
     `
     var track OrderTracking
-    err := r.db.QueryRow(ctx, query, orderID).Scan(
+    err := r.db.QueryRow(ctx, query, customerID, orderID).Scan(
         &track.OrderID, &track.Status, &track.MerchantName, &track.MerchantAddress,
         &track.RiderName, &track.RiderPhone, &track.RiderLatitude, &track.RiderLongitude,
         &track.EstimatedMinutes, &track.UpdatedAt,
@@ -366,94 +384,22 @@ func (r *pgRepo) GetOrderTracking(ctx context.Context, orderID string) (*OrderTr
 }
 
 func (r *pgRepo) GetNotifications(ctx context.Context, customerID string) ([]*NotificationItem, error) {
-    query := `
-        SELECT id, COALESCE(user_id::text, ''), channel, template_key, payload, status, created_at
-        FROM notifications.notification_logs
-        WHERE user_id::text = $1 OR user_id IS NULL
-        ORDER BY created_at DESC
-        LIMIT 20
-    `
-    rows, err := r.db.Query(ctx, query, customerID)
-    if err == nil {
-        defer rows.Close()
-        var list []*NotificationItem
-        for rows.Next() {
-            var item NotificationItem
-            var payload map[string]interface{}
-            if err := rows.Scan(&item.ID, &item.UserID, &item.Channel, &item.TemplateKey, &payload, &item.Status, &item.CreatedAt); err == nil {
-                if title, ok := payload["title"].(string); ok {
-                    item.Title = title
-                } else {
-                    item.Title = "YEMBER Update"
-                }
-                if message, ok := payload["message"].(string); ok {
-                    item.Message = message
-                } else {
-                    item.Message = "Your order update is here."
-                }
-                item.Read = (item.Status == "READ")
-                list = append(list, &item)
-            }
-        }
-        if len(list) > 0 {
-            return list, nil
-        }
+    rows, err := r.db.Query(ctx, `SELECT id,COALESCE(user_id::text,''),channel,template_key,payload,status,created_at FROM notifications.notification_logs WHERE user_id=$1 ORDER BY created_at DESC LIMIT 100`, customerID)
+    if err != nil {
+        return nil, err
     }
-
-    // Seed initial notifications in DB if empty for customer
-    if customerID != "" {
-        _ = r.db.QueryRow(ctx, `
-            INSERT INTO notifications.notification_logs (user_id, channel, template_key, payload, status)
-            VALUES ($1::uuid, 'PUSH', 'welcome', '{"title": "Welcome to YEMBER!", "message": "Discover authentic Kashmiri delicacies & top Srinagar eateries delivered right to your doorstep."}', 'DELIVERED')
-        `, customerID)
-        _ = r.db.QueryRow(ctx, `
-            INSERT INTO notifications.notification_logs (user_id, channel, template_key, payload, status)
-            VALUES ($1::uuid, 'PUSH', 'special_offer', '{"title": "Special Offer: 20% OFF", "message": "Use promo code VALLEY20 on your next order for 20% off."}', 'DELIVERED')
-        `, customerID)
-
-        rows2, err2 := r.db.Query(ctx, query, customerID)
-        if err2 == nil {
-            defer rows2.Close()
-            var list []*NotificationItem
-            for rows2.Next() {
-                var item NotificationItem
-                var payload map[string]interface{}
-                if err := rows2.Scan(&item.ID, &item.UserID, &item.Channel, &item.TemplateKey, &payload, &item.Status, &item.CreatedAt); err == nil {
-                    if title, ok := payload["title"].(string); ok {
-                        item.Title = title
-                    }
-                    if message, ok := payload["message"].(string); ok {
-                        item.Message = message
-                    }
-                    item.Read = (item.Status == "READ")
-                    list = append(list, &item)
-                }
-            }
-            if len(list) > 0 {
-                return list, nil
-            }
+    defer rows.Close()
+    list := []*NotificationItem{}
+    for rows.Next() {
+        var item NotificationItem
+        var payload map[string]interface{}
+        if err = rows.Scan(&item.ID, &item.UserID, &item.Channel, &item.TemplateKey, &payload, &item.Status, &item.CreatedAt); err != nil {
+            return nil, err
         }
+        item.Title, _ = payload["title"].(string)
+        item.Message, _ = payload["message"].(string)
+        item.Read = item.Status == "READ"
+        list = append(list, &item)
     }
-
-    return []*NotificationItem{
-        {
-            ID:          "1",
-            Title:       "Welcome to YEMBER!",
-            Message:     "Discover authentic Kashmiri delicacies & top Srinagar eateries delivered right to your doorstep.",
-            Channel:     "PUSH",
-            TemplateKey: "welcome",
-            Status:      "DELIVERED",
-            Read:        false,
-        },
-        {
-            ID:          "2",
-            Title:       "Special Offer: 20% OFF",
-            Message:     "Use promo code VALLEY20 on your next order for 20% off from local Srinagar favourites.",
-            Channel:     "PUSH",
-            TemplateKey: "special_offer",
-            Status:      "DELIVERED",
-            Read:        true,
-        },
-    }, nil
+    return list, rows.Err()
 }
-

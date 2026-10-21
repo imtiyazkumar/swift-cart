@@ -4,12 +4,14 @@ import (
     "net/http"
     "strings"
 
+    "github.com/jackc/pgx/v5/pgxpool"
+
     "github.com/labstack/echo/v4"
     "go.uber.org/zap"
 )
 
 // JWTMiddleware validates the Authorization header and sets user info in the context.
-func JWTMiddleware(secret string, logger *zap.Logger) echo.MiddlewareFunc {
+func JWTMiddleware(secret string, logger *zap.Logger, pools ...*pgxpool.Pool) echo.MiddlewareFunc {
     return func(next echo.HandlerFunc) echo.HandlerFunc {
         return func(c echo.Context) error {
             authHeader := c.Request().Header.Get("Authorization")
@@ -22,13 +24,21 @@ func JWTMiddleware(secret string, logger *zap.Logger) echo.MiddlewareFunc {
             }
             tokenStr := parts[1]
             claims, err := ParseToken(secret, tokenStr)
-            if err != nil {
+            if err != nil || claims.TokenType != "access" {
                 logger.Error("jwt parse error", zap.Error(err))
                 return echo.NewHTTPError(http.StatusUnauthorized, "invalid token")
             }
             // Store user ID and role in the echo context for downstream handlers.
             c.Set("userID", claims.UserID)
             c.Set("role", claims.Role)
+            if len(pools) > 0 {
+                var currentRole string
+                err := pools[0].QueryRow(c.Request().Context(), `SELECT role FROM public.users WHERE id=$1 AND deleted_at IS NULL AND disabled_at IS NULL`, claims.UserID).Scan(&currentRole)
+                if err != nil {
+                    return echo.NewHTTPError(http.StatusUnauthorized, "account is unavailable")
+                }
+                c.Set("role", currentRole)
+            }
             return next(c)
         }
     }

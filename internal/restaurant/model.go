@@ -10,6 +10,7 @@ type RestaurantProfile struct {
     IsActive         bool      `json:"is_active"`
     OnboardingStatus string    `json:"onboarding_status"`
     ApprovalStatus   string    `json:"approval_status"`
+    FeePaymentStatus string    `json:"fee_payment_status"`
     Tags             []string  `json:"tags"`
     BranchAddress    string    `json:"branch_address,omitempty"`
     CreatedAt        time.Time `json:"created_at"`
@@ -36,14 +37,14 @@ type MenuItemInput struct {
 }
 
 type RestaurantOrder struct {
-    ID             string    `json:"id"`
-    CustomerName   string    `json:"customer_name"`
-    CustomerPhone  string    `json:"customer_phone"`
-    ItemsSummary   string    `json:"items_summary"`
-    TotalAmount    int64     `json:"total_amount"`
-    Status         string    `json:"status"`
-    Notes          string    `json:"notes,omitempty"`
-    CreatedAt      time.Time `json:"created_at"`
+    ID            string    `json:"id"`
+    CustomerName  string    `json:"customer_name"`
+    CustomerPhone string    `json:"customer_phone"`
+    ItemsSummary  string    `json:"items_summary"`
+    TotalAmount   int64     `json:"total_amount"`
+    Status        string    `json:"status"`
+    Notes         string    `json:"notes,omitempty"`
+    CreatedAt     time.Time `json:"created_at"`
 }
 
 type DailySalesSummary struct {

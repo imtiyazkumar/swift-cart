@@ -6,7 +6,7 @@ import (
 )
 
 type Repository interface {
-	CreateIntent(ctx context.Context, intent *Intent) error
+	CreateIntent(ctx context.Context, customerID string, intent *Intent) error
 	MarkWebhookProcessed(ctx context.Context, provider, eventID string) error
 }
 
@@ -18,8 +18,8 @@ func NewService(repo Repository) *Service {
 	return &Service{repo: repo}
 }
 
-func (s *Service) CreateIntent(ctx context.Context, intent *Intent) (*Intent, error) {
-	if intent.OrderID == "" || intent.Amount <= 0 {
+func (s *Service) CreateIntent(ctx context.Context, customerID string, intent *Intent) (*Intent, error) {
+	if customerID == "" || intent.OrderID == "" || intent.Amount <= 0 {
 		return nil, errors.New("order_id and positive amount are required")
 	}
 	if intent.Currency == "" {
@@ -32,7 +32,7 @@ func (s *Service) CreateIntent(ctx context.Context, intent *Intent) (*Intent, er
 		intent.Method = "UPI"
 	}
 	intent.Status = "CREATED"
-	if err := s.repo.CreateIntent(ctx, intent); err != nil {
+	if err := s.repo.CreateIntent(ctx, customerID, intent); err != nil {
 		return nil, err
 	}
 	return intent, nil

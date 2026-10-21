@@ -5,7 +5,7 @@ import "testing"
 func TestLoadReadsEnvironment(t *testing.T) {
 	t.Setenv("PORT", "9090")
 	t.Setenv("LOG_LEVEL", "debug")
-	t.Setenv("POSTGRES_DSN", "postgres://postgres:postgres@localhost:5432/swiftkart?sslmode=disable")
+	t.Setenv("POSTGRES_DSN", "postgres://postgres:postgres@localhost:5432/yember?sslmode=disable")
 	t.Setenv("JWT_SECRET", "test-secret")
 	t.Setenv("JWT_EXPIRE_MINS", "20")
 	t.Setenv("REFRESH_EXPIRE_DAYS", "10")

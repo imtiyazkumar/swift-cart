@@ -26,10 +26,16 @@ go.work.sum
 
 # env file
 .env
+.env.*
+!.env.example
+!.env.test.example
+.private-documents-test/
 
 # Local project walkthrough notes
 docs/project-flow.md
 
 # Editor/IDE
-# .idea/
+.idea/
 # .vscode/
+.private-documents/
+.test-cache/

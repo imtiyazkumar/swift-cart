@@ -1,40 +1,51 @@
 package config
 
 import (
-	"errors"
-	"os"
+    "errors"
+    "os"
 
-	"github.com/kelseyhightower/envconfig"
+    "github.com/kelseyhightower/envconfig"
 )
 
 type Config struct {
-	// PostgreSQL DSN
-	PostgresDSN string `envconfig:"POSTGRES_DSN"`
-	// JWT secret for signing tokens
-	JWTSecret string `envconfig:"JWT_SECRET"`
-	// Log level (debug, info, warn, error)
-	LogLevel string `envconfig:"LOG_LEVEL" default:"info"`
-	// Port for the HTTP server
-	Port string `envconfig:"PORT" default:"8080"`
+    // PostgreSQL DSN
+    PostgresDSN string `envconfig:"POSTGRES_DSN"`
+    // JWT secret for signing tokens
+    JWTSecret string `envconfig:"JWT_SECRET"`
+    // Log level (debug, info, warn, error)
+    LogLevel string `envconfig:"LOG_LEVEL" default:"info"`
+    // Port for the HTTP server
+    Port                 string `envconfig:"PORT" default:"8080"`
+    SMTPHost             string `envconfig:"SMTP_HOST"`
+    SMTPPort             string `envconfig:"SMTP_PORT" default:"587"`
+    SMTPUsername         string `envconfig:"SMTP_USERNAME"`
+    SMTPPassword         string `envconfig:"SMTP_PASSWORD"`
+    SMTPFrom             string `envconfig:"SMTP_FROM"`
+    PasswordResetURL     string `envconfig:"PASSWORD_RESET_URL" default:"yember://auth/reset-password"`
+    ResendAPIKey         string `envconfig:"RESEND_API_KEY"`
+    EmailFrom            string `envconfig:"EMAIL_FROM"`
+    EmailDeliveryEnabled bool   `envconfig:"EMAIL_DELIVERY_ENABLED" default:"false"`
+    CORSAllowedOrigins   string `envconfig:"CORS_ALLOWED_ORIGINS" default:"http://localhost:5173,http://127.0.0.1:5173,http://localhost:8081,http://localhost:8082,http://localhost:8083"`
+    AdminCookieSecure    bool   `envconfig:"ADMIN_COOKIE_SECURE" default:"true"`
 }
 
 // Load reads environment variables into a Config struct.
 func Load() (*Config, error) {
-	var cfg Config
-	if err := envconfig.Process("", &cfg); err != nil {
-		return nil, err
-	}
-	if cfg.PostgresDSN == "" {
-		cfg.PostgresDSN = os.Getenv("POSTGRESDSN")
-	}
-	if cfg.JWTSecret == "" {
-		cfg.JWTSecret = os.Getenv("JWTSECRET")
-	}
-	if cfg.JWTSecret == "" {
-		cfg.JWTSecret = "changeme"
-	}
-	if cfg.PostgresDSN == "" {
-		return nil, errors.New("POSTGRES_DSN is required")
-	}
-	return &cfg, nil
+    var cfg Config
+    if err := envconfig.Process("", &cfg); err != nil {
+        return nil, err
+    }
+    if cfg.PostgresDSN == "" {
+        cfg.PostgresDSN = os.Getenv("POSTGRESDSN")
+    }
+    if cfg.JWTSecret == "" {
+        cfg.JWTSecret = os.Getenv("JWTSECRET")
+    }
+    if len(cfg.JWTSecret) < 32 {
+        return nil, errors.New("JWT_SECRET must contain at least 32 characters")
+    }
+    if cfg.PostgresDSN == "" {
+        return nil, errors.New("POSTGRES_DSN is required")
+    }
+    return &cfg, nil
 }

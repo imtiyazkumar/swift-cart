@@ -1,12 +1,16 @@
 package auth
+
 import (
     "fmt"
-    "time"
     "github.com/golang-jwt/jwt/v5"
+    "github.com/google/uuid"
+    "time"
 )
+
 type Claims struct {
-    UserID string `json:"sub"`
-    Role   string `json:"role"`
+    UserID    string `json:"sub"`
+    Role      string `json:"role"`
+    TokenType string `json:"token_type"`
     jwt.RegisteredClaims
 }
 
@@ -14,11 +18,13 @@ type Claims struct {
 func GenerateAccessToken(secret, userID, role string) (string, error) {
     now := time.Now()
     claims := Claims{
-        UserID: userID,
-        Role:   role,
+        UserID:    userID,
+        Role:      role,
+        TokenType: "access",
         RegisteredClaims: jwt.RegisteredClaims{
+            ID:        uuid.NewString(),
             IssuedAt:  jwt.NewNumericDate(now),
-            ExpiresAt: jwt.NewNumericDate(now.Add(time.Hour)), // 1 hour TTL per plan
+            ExpiresAt: jwt.NewNumericDate(now.Add(15 * time.Minute)),
         },
     }
     token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
@@ -29,9 +35,11 @@ func GenerateAccessToken(secret, userID, role string) (string, error) {
 func GenerateRefreshToken(secret, userID, role string) (string, error) {
     now := time.Now()
     claims := Claims{
-        UserID: userID,
-        Role:   role,
+        UserID:    userID,
+        Role:      role,
+        TokenType: "refresh",
         RegisteredClaims: jwt.RegisteredClaims{
+            ID:        uuid.NewString(),
             IssuedAt:  jwt.NewNumericDate(now),
             ExpiresAt: jwt.NewNumericDate(now.Add(7 * 24 * time.Hour)),
         },
@@ -43,6 +51,9 @@ func GenerateRefreshToken(secret, userID, role string) (string, error) {
 // ParseToken validates a token and returns its claims.
 func ParseToken(secret, tokenStr string) (*Claims, error) {
     token, err := jwt.ParseWithClaims(tokenStr, &Claims{}, func(t *jwt.Token) (interface{}, error) {
+        if t.Method != jwt.SigningMethodHS256 {
+            return nil, fmt.Errorf("unexpected signing method")
+        }
         return []byte(secret), nil
     })
     if err != nil {

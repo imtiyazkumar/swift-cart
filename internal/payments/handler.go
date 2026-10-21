@@ -13,7 +13,8 @@ func RegisterRoutes(g *echo.Group, svc *Service) {
 		if err := c.Bind(&req); err != nil {
 			return common.BadRequest("invalid request body")
 		}
-		intent, err := svc.CreateIntent(c.Request().Context(), &req)
+		customerID, _ := c.Get("userID").(string)
+		intent, err := svc.CreateIntent(c.Request().Context(), customerID, &req)
 		if err != nil {
 			return common.BadRequest(err.Error())
 		}

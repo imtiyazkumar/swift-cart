@@ -7,12 +7,17 @@
 3. Apply migrations with `make migrate`.
 4. Run the API with `make run`.
 
+To apply one repair migration to an existing database without replaying the full migration directory, run from `yember-core`: `go run ./cmd/migrate -file 019_ensure_order_delivery_address.sql`.
+
+To enable password recovery, configure `SMTP_HOST`, `SMTP_PORT`, `SMTP_USERNAME`, `SMTP_PASSWORD`, and `SMTP_FROM`. Set `PASSWORD_RESET_URL` to the app deep link (`yember://auth/reset-password` by default). Email delivery is unavailable until SMTP is configured.
+
 ## Docker Compose
 
 `docker-compose.yml` includes PostgreSQL and the API. The API waits for a healthy database before booting.
 
 ## Production Notes
 
+- Apply the SQL migrations to the production database before deploying API code that depends on new columns. In particular, checkout requires `orders.delivery_address`; migration `019_ensure_order_delivery_address.sql` repairs databases that missed the original column migration.
 - Use a managed PostgreSQL instance with backups and PITR.
 - Store secrets outside images and compose files.
 - Terminate TLS at a load balancer or reverse proxy.

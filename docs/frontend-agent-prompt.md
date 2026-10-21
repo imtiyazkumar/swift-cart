@@ -1,16 +1,16 @@
-# SwiftKart Frontend Agent Brief
+# Yember Core Frontend Agent Brief
 
-This document summarizes the current repository and provides a copy-ready prompt for an AI coding agent to build the SwiftKart web frontend.
+This document summarizes the current repository and provides a copy-ready prompt for an AI coding agent to build the Yember Core web frontend.
 
 ## Project Study
 
 ### What exists
 
-- SwiftKart is a Go 1.25 modular monolith using Echo, PostgreSQL/pgx, JWT authentication, Zap logging, SQL migrations, and an in-process event bus.
+- Yember Core is a Go 1.25 modular monolith using Echo, PostgreSQL/pgx, JWT authentication, Zap logging, SQL migrations, and an in-process event bus.
 - The API listens on port `8080`; API routes are under `/api/v1`. Local setup is documented in `docs/deployment.md` and `Makefile` (`make docker-up`, `make migrate`, `make run`).
 - There is currently no frontend application, JavaScript package manifest, or frontend build pipeline in the repository. The root `/` endpoint serves an API service-status HTML page, not a product UI.
 - The principal API/domain packages are `auth`, `merchant`, `customer`, `catalog`, `order`, `delivery`, `payments`, `notifications`, and `realtime`.
-- Merchant types are `RESTAURANT`, `GROCERY`, `PHARMACY`, `PET_STORE`, and `FLOWER_SHOP`. SwiftKart is intentionally modeled as Merchant → Catalog → Item, not only as a restaurant/menu/food app.
+- Merchant types are `RESTAURANT`, `GROCERY`, `PHARMACY`, `PET_STORE`, and `FLOWER_SHOP`. Yember Core is intentionally modeled as Merchant → Catalog → Item, not only as a restaurant/menu/food app.
 
 ### Current API surface
 
@@ -42,11 +42,11 @@ All URLs below are relative to `http://localhost:8080` by default. Successful cr
 
 ## Copy-Ready Prompt
 
-> You are a senior frontend engineer implementing the SwiftKart web application inside this repository. First inspect the existing workspace and follow its instructions. Build a complete, responsive web frontend for the existing SwiftKart Go/Echo + PostgreSQL API. The repository currently has no frontend scaffold, so add the frontend in a clearly isolated directory such as `web/` without breaking the Go API, migrations, Docker setup, or existing docs. Do not stop at mockups: implement working navigation, forms, tables, detail views, API integration, validation, loading/error/empty states, and responsive behavior.
+> You are a senior frontend engineer implementing the Yember Core web application inside this repository. First inspect the existing workspace and follow its instructions. Build a complete, responsive web frontend for the existing Yember Core Go/Echo + PostgreSQL API. The repository currently has no frontend scaffold, so add the frontend in a clearly isolated directory such as `web/` without breaking the Go API, migrations, Docker setup, or existing docs. Do not stop at mockups: implement working navigation, forms, tables, detail views, API integration, validation, loading/error/empty states, and responsive behavior.
 >
 > ## Product goal
 >
-> Deliver one coherent SwiftKart product with three distinct workspaces selected by the signed-in account/context:
+> Deliver one coherent Yember Core product with three distinct workspaces selected by the signed-in account/context:
 >
 > 1. **Superadmin console**: platform-wide overview; merchant directory and merchant creation/editing; inspect a merchant’s profile, catalog, customers and orders where the current API permits; customer directory/details; global order operations and status management; delivery assignment operations; payment-intent visibility only where actually available; integration/health visibility. Make it easy to move from a merchant to its catalog and related operational records.
 > 2. **Merchant workspace**: merchant overview; manage the merchant’s own profile and catalog items/categories; inspect/manage that merchant’s orders and advance allowed order statuses; provide clear entry points for branches, hours, documents, inventory, analytics, settlements, and delivery coordination, but mark unavailable capabilities as not connected until APIs exist. Never imply that client-side merchant filtering is authorization.
@@ -77,14 +77,15 @@ All URLs below are relative to `http://localhost:8080` by default. Successful cr
 > - Payments: `POST /api/v1/payments/intents` (`order_id`, positive `amount`, optional `provider`, `method`, `currency`, `idempotency_key`). Defaults are `RAZORPAY`, `UPI`, `INR`. This creates an intent only; there is no payment processing UI contract, status query, refund, or settlement API.
 > - Health: `GET /healthz`, `GET /readyz`.
 >
-> Existing documentation and payload examples are in `docs/api.md`, `docs/architecture.md`, `docs/deployment.md`, and `postman/SwiftKart API.postman_collection.json`. If the repository has evolved, verify the current handlers and route registration before relying on this list.
+> Existing documentation and payload examples are in `docs/api.md`, `docs/architecture.md`, `docs/deployment.md`, and `postman/Yember Core API.postman_collection.json`. If the repository has evolved, verify the current handlers and route registration before relying on this list.
 >
 > ## Portal requirements
 >
 > ### Shared shell and access
 >
-> - Create a consistent SwiftKart identity and clear distinction among Superadmin, Merchant, and Customer experiences. Show current workspace/account and provide an explicit way to switch only when the account is genuinely authorized to do so.
+> - Create a consistent Yember Core identity and clear distinction among Superadmin, Merchant, and Customer experiences. Show current workspace/account and provide an explicit way to switch only when the account is genuinely authorized to do so.
 > - Make desktop information-dense but readable; provide a responsive mobile layout with navigation that remains usable without horizontal overflow.
+> - Keep navigation transitions at the framework/browser default. Do not add custom moving, sliding, or animated effects when switching routes or opening the navigation; preserve conventional immediate navigation behavior.
 > - Include search where data volume warrants it, filters, sorting, pagination/client-side paging only when the full server result is actually loaded, and clear record IDs/statuses for operational lookup.
 > - All destructive or consequential actions need confirmation, clear success/error feedback, and protection against duplicate submissions.
 > - Forms need labels, required-field validation, accessible keyboard behavior, focus management, and clear inline errors. Tables and controls need semantic markup and accessible names.
@@ -118,7 +119,7 @@ All URLs below are relative to `http://localhost:8080` by default. Successful cr
 > ## Design direction
 >
 > - Build an intentional, polished commerce operations product, not a generic landing page or a set of decorative cards. The first screen after sign-in should be the appropriate usable workspace.
-> - Use SwiftKart's existing visual cues as a starting point: forest green, bright citrus/lime, warm near-white, and a restrained coral accent; strong readable contrast; Manrope and DM Mono are already used by the API status page. Define reusable design tokens and status colors with accessible contrast.
+> - Use Yember Core's existing visual cues as a starting point: forest green, bright citrus/lime, warm near-white, and a restrained coral accent; strong readable contrast; Manrope and DM Mono are already used by the API status page. Define reusable design tokens and status colors with accessible contrast.
 > - Use quiet, dense admin layouts with clear tables, compact metrics, restrained borders, useful empty states, and consistent status badges. Keep customer shopping more visual and product-forward while remaining fast and legible.
 > - Use icons for common actions, tooltips for unfamiliar icon-only controls, responsive behavior, and reduced-motion support. Avoid oversized marketing heroes, excessive nested cards, fake charts, placeholder lorem ipsum, and interactions that look functional but do nothing.
 >

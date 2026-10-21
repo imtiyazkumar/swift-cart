@@ -3,6 +3,7 @@ package restaurant
 import (
     "context"
     "errors"
+    "math"
 )
 
 type Service struct {
@@ -42,7 +43,7 @@ func (s *Service) CreateCategory(ctx context.Context, cat *MenuCategory) error {
 }
 
 func (s *Service) SaveMenuItem(ctx context.Context, item *MenuItemInput) (string, error) {
-    if item.MerchantID == "" || item.Name == "" || item.Price <= 0 {
+    if item.MerchantID == "" || item.Name == "" || item.Price <= 0 || item.Price > 10000000 || math.IsNaN(item.Price) || math.IsInf(item.Price, 0) || math.Abs(item.Price*100-math.Round(item.Price*100)) > 0.00001 {
         return "", errors.New("merchantID, name, and valid price required")
     }
     return s.repo.SaveMenuItem(ctx, item)

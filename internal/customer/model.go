@@ -54,22 +54,23 @@ type Coupon struct {
 }
 
 type ReviewRequest struct {
-    OrderID string `json:"order_id"`
-    Rating  int    `json:"rating"`
-    Comment string `json:"comment"`
+    DeliveryRating int    `json:"delivery_rating,omitempty"`
+    OrderID        string `json:"order_id"`
+    Rating         int    `json:"rating"`
+    Comment        string `json:"comment"`
 }
 
 type OrderTracking struct {
-    OrderID           string    `json:"order_id"`
-    Status            string    `json:"status"`
-    MerchantName      string    `json:"merchant_name"`
-    MerchantAddress   string    `json:"merchant_address"`
-    RiderName         string    `json:"rider_name,omitempty"`
-    RiderPhone        string    `json:"rider_phone,omitempty"`
-    RiderLatitude     float64   `json:"rider_latitude,omitempty"`
-    RiderLongitude    float64   `json:"rider_longitude,omitempty"`
-    EstimatedMinutes  int       `json:"estimated_minutes"`
-    UpdatedAt         time.Time `json:"updated_at"`
+    OrderID          string    `json:"order_id"`
+    Status           string    `json:"status"`
+    MerchantName     string    `json:"merchant_name"`
+    MerchantAddress  string    `json:"merchant_address"`
+    RiderName        string    `json:"rider_name,omitempty"`
+    RiderPhone       string    `json:"rider_phone,omitempty"`
+    RiderLatitude    float64   `json:"rider_latitude,omitempty"`
+    RiderLongitude   float64   `json:"rider_longitude,omitempty"`
+    EstimatedMinutes int       `json:"estimated_minutes"`
+    UpdatedAt        time.Time `json:"updated_at"`
 }
 
 type NotificationItem struct {
@@ -83,4 +84,3 @@ type NotificationItem struct {
     CreatedAt   time.Time `json:"created_at"`
     Read        bool      `json:"read"`
 }
-

@@ -1,0 +1,1 @@
+ALTER TABLE public.merchants ADD COLUMN IF NOT EXISTS description TEXT NOT NULL DEFAULT '';

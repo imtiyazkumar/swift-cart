@@ -45,14 +45,14 @@ func (r *pgRepo) GetStats(ctx context.Context) (*PlatformStats, error) {
         &s.TotalOrders, &s.TotalRevenue, &s.ActiveDeliveries,
     )
     if err != nil {
-        return &PlatformStats{TotalUsers: 140, TotalMerchants: 12, TotalRiders: 25, TotalOrders: 320, TotalRevenue: 185000, ActiveDeliveries: 4}, nil
+        return nil, err
     }
     return &s, nil
 }
 
 func (r *pgRepo) ListUsers(ctx context.Context) ([]*UserManagementItem, error) {
     query := `
-        SELECT id, email, COALESCE(full_name, 'N/A'), COALESCE(phone, 'N/A'), role, created_at
+        SELECT id, COALESCE(email, ''), COALESCE(full_name, ''), COALESCE(phone, ''), role, created_at
         FROM public.users
         WHERE deleted_at IS NULL
         ORDER BY created_at DESC
@@ -105,7 +105,7 @@ func (r *pgRepo) ListPendingMerchants(ctx context.Context) ([]*PendingMerchant, 
 }
 
 func (r *pgRepo) ApproveMerchant(ctx context.Context, merchantID, status string) error {
-    query := `UPDATE public.merchants SET approval_status = $1, is_active = ($1 = 'APPROVED'), updated_at = NOW() WHERE id = $2`
+    query := `UPDATE public.merchants SET approval_status = $1, is_active = false, updated_at = NOW() WHERE id = $2`
     _, err := r.db.Exec(ctx, query, status, merchantID)
     return err
 }

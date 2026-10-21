@@ -25,6 +25,11 @@ func (s *Service) UpdateUserRole(ctx context.Context, userID, newRole string) er
     if userID == "" || newRole == "" {
         return errors.New("userID and newRole required")
     }
+    switch newRole {
+    case "CUSTOMER", "MERCHANT_OWNER", "DELIVERY_PARTNER", "ADMIN":
+    default:
+        return errors.New("unsupported role")
+    }
     return s.repo.UpdateUserRole(ctx, userID, newRole)
 }
 
@@ -33,7 +38,7 @@ func (s *Service) ListPendingMerchants(ctx context.Context) ([]*PendingMerchant,
 }
 
 func (s *Service) ApproveMerchant(ctx context.Context, merchantID, status string) error {
-    if merchantID == "" || status == "" {
+    if merchantID == "" || (status != "APPROVED" && status != "REJECTED") {
         return errors.New("merchantID and status required")
     }
     return s.repo.ApproveMerchant(ctx, merchantID, status)
@@ -44,7 +49,7 @@ func (s *Service) ListPendingRiders(ctx context.Context) ([]*PendingRider, error
 }
 
 func (s *Service) ApproveRider(ctx context.Context, partnerID, status string) error {
-    if partnerID == "" || status == "" {
+    if partnerID == "" || (status != "APPROVED" && status != "REJECTED") {
         return errors.New("partnerID and status required")
     }
     return s.repo.ApproveRider(ctx, partnerID, status)

@@ -94,17 +94,20 @@ func (s *Service) ValidateCoupon(ctx context.Context, code string, amount int64)
 }
 
 func (s *Service) SubmitReview(ctx context.Context, customerID string, req *ReviewRequest) error {
+    if req.DeliveryRating < 0 || req.DeliveryRating > 5 || len(req.Comment) > 2000 {
+        return errors.New("delivery rating must be 1-5 when supplied and comment at most 2000 characters")
+    }
     if req.OrderID == "" || req.Rating < 1 || req.Rating > 5 {
         return errors.New("valid orderID and rating (1-5) are required")
     }
     return s.repo.SubmitReview(ctx, customerID, req)
 }
 
-func (s *Service) GetOrderTracking(ctx context.Context, orderID string) (*OrderTracking, error) {
-    if orderID == "" {
-        return nil, errors.New("orderID is required")
+func (s *Service) GetOrderTracking(ctx context.Context, customerID, orderID string) (*OrderTracking, error) {
+    if customerID == "" || orderID == "" {
+        return nil, errors.New("customerID and orderID are required")
     }
-    return s.repo.GetOrderTracking(ctx, orderID)
+    return s.repo.GetOrderTracking(ctx, customerID, orderID)
 }
 
 func (s *Service) GetNotifications(ctx context.Context, customerID string) ([]*NotificationItem, error) {
@@ -124,4 +127,3 @@ func (s *Service) ListAddresses(ctx context.Context, customerID string) ([]map[s
     }
     return s.repo.ListAddresses(ctx, customerID)
 }
-

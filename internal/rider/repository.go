@@ -3,6 +3,7 @@ package rider
 import (
     "context"
     "fmt"
+    "github.com/imtiyazkumar/yember-core/internal/dispatch"
 
     "github.com/jackc/pgx/v5/pgxpool"
     "go.uber.org/zap"
@@ -18,6 +19,8 @@ type Repository interface {
     GetEarningsSummary(ctx context.Context, partnerID string) (*RiderEarningsSummary, error)
 }
 
+type partnerContextKey struct{}
+
 type pgRepo struct {
     db  *pgxpool.Pool
     log *zap.Logger
@@ -30,7 +33,7 @@ func NewPostgresRepo(db *pgxpool.Pool, log *zap.Logger) Repository {
 func (r *pgRepo) GetRiderByUserID(ctx context.Context, userID string) (*RiderProfile, error) {
     query := `
         SELECT dp.id, dp.user_id, dp.name, dp.phone, dp.status, dp.approval_status,
-               COALESCE(v.vehicle_type, 'Scooter'), COALESCE(v.registration_number, 'JK-01-AB-1234'), dp.created_at
+               COALESCE(v.vehicle_type, ''), COALESCE(v.registration_number, ''), dp.created_at
         FROM delivery.delivery_partners dp
         LEFT JOIN delivery.vehicles v ON dp.id = v.partner_id
         WHERE dp.user_id = $1 AND dp.deleted_at IS NULL
@@ -47,8 +50,14 @@ func (r *pgRepo) GetRiderByUserID(ctx context.Context, userID string) (*RiderPro
 }
 
 func (r *pgRepo) UpdateStatus(ctx context.Context, partnerID, status string) error {
-    query := `UPDATE delivery.delivery_partners SET status = $1, updated_at = NOW() WHERE id = $2`
-    _, err := r.db.Exec(ctx, query, status, partnerID)
+    if status != "ONLINE" && status != "OFFLINE" {
+        return fmt.Errorf("status must be ONLINE or OFFLINE")
+    }
+    query := `UPDATE delivery.delivery_partners SET status = $1, updated_at = NOW() WHERE id = $2 AND deleted_at IS NULL AND (approval_status='APPROVED' OR $1='OFFLINE')`
+    tag, err := r.db.Exec(ctx, query, status, partnerID)
+    if err == nil && tag.RowsAffected() != 1 {
+        return fmt.Errorf("approval is required to go online")
+    }
     return err
 }
 
@@ -60,16 +69,16 @@ func (r *pgRepo) RecordLocation(ctx context.Context, partnerID string, lat, lng 
 
 func (r *pgRepo) ListAvailableJobs(ctx context.Context) ([]*DeliveryJob, error) {
     query := `
-        SELECT o.id, m.name, COALESCE(mb.address, 'Srinagar Central'),
-               c.name, COALESCE(o.delivery_fee, 4000), o.status, o.created_at
+        SELECT o.id, m.name, COALESCE(mb.address, ''),
+               c.name, COALESCE(o.delivery_fee, 0), o.status, o.created_at
         FROM public.orders o
         JOIN public.merchants m ON o.merchant_id = m.id
         LEFT JOIN merchants.merchant_branches mb ON m.id = mb.merchant_id
         JOIN public.customers c ON o.customer_id = c.id
-        WHERE o.status IN ('READY_FOR_PICKUP', 'PREPARING')
+        WHERE EXISTS(SELECT 1 FROM delivery.offers f WHERE f.order_id=o.id AND f.partner_id=$1 AND f.status='PENDING' AND f.expires_at>now())
         ORDER BY o.created_at ASC
     `
-    rows, err := r.db.Query(ctx, query)
+    rows, err := r.db.Query(ctx, query, ctx.Value(partnerContextKey{}))
     if err != nil {
         return nil, err
     }
@@ -90,13 +99,7 @@ func (r *pgRepo) ListAvailableJobs(ctx context.Context) ([]*DeliveryJob, error) 
 }
 
 func (r *pgRepo) AcceptJob(ctx context.Context, partnerID, orderID string) error {
-    query := `
-        INSERT INTO delivery.delivery_assignments (order_id, partner_id, status)
-        VALUES ($1, $2, 'ASSIGNED')
-        ON CONFLICT (order_id, partner_id) DO UPDATE SET status = 'ASSIGNED', updated_at = NOW()
-    `
-    _, err := r.db.Exec(ctx, query, orderID, partnerID)
-    return err
+    return dispatch.Accept(ctx, r.db, partnerID, orderID)
 }
 
 func (r *pgRepo) UpdateJobStatus(ctx context.Context, partnerID, orderID, status string) error {
@@ -119,6 +122,20 @@ func (r *pgRepo) UpdateJobStatus(ctx context.Context, partnerID, orderID, status
     }
     defer tx.Rollback(ctx)
 
+    var currentOrder, currentAssignment string
+    err = tx.QueryRow(ctx, `SELECT status FROM public.orders WHERE id=$1 FOR UPDATE`, orderID).Scan(&currentOrder)
+    if err != nil {
+        return err
+    }
+    err = tx.QueryRow(ctx, `SELECT status FROM delivery.delivery_assignments WHERE order_id=$1 AND partner_id=$2 FOR UPDATE`, orderID, partnerID).Scan(&currentAssignment)
+    if err != nil {
+        return fmt.Errorf("accepted delivery assignment required")
+    }
+    valid := (status == "PICKED_UP" && currentAssignment == "ASSIGNED" && currentOrder == "READY_FOR_PICKUP") || (status == "OUT_FOR_DELIVERY" && currentAssignment == "PICKED_UP" && currentOrder == "PICKED_UP") || (status == "DELIVERED" && (currentAssignment == "PICKED_UP" || currentAssignment == "OUT_FOR_DELIVERY") && (currentOrder == "PICKED_UP" || currentOrder == "OUT_FOR_DELIVERY"))
+    if !valid {
+        return fmt.Errorf("invalid delivery transition")
+    }
+
     _, err = tx.Exec(ctx, `UPDATE delivery.delivery_assignments SET status = $1, updated_at = NOW() WHERE order_id = $2 AND partner_id = $3`, status, orderID, partnerID)
     if err != nil {
         return err
@@ -131,14 +148,46 @@ func (r *pgRepo) UpdateJobStatus(ctx context.Context, partnerID, orderID, status
 
     if status == "DELIVERED" {
         // Record earnings
-        _, _ = tx.Exec(ctx, `
+        _, err = tx.Exec(ctx, `
             INSERT INTO delivery.rider_earnings (partner_id, order_id, delivery_fee, tip_amount)
-            VALUES ($1, $2, 4000, 500)
-            ON CONFLICT DO NOTHING
+            SELECT $1, id, delivery_fee, 0 FROM public.orders WHERE id=$2
         `, partnerID, orderID)
+        if err != nil {
+            return err
+        }
+    }
+
+    _, err = tx.Exec(ctx, `INSERT INTO orders.order_status_history(order_id,status,changed_by) SELECT $1,$2::order_status,user_id FROM delivery.delivery_partners WHERE id=$3`, orderID, status, partnerID)
+    if err != nil {
+        return err
+    }
+    _, err = tx.Exec(ctx, `INSERT INTO notifications.email_outbox(recipient,subject,body) SELECT u.email,'Yember delivery update',$2 FROM public.orders o JOIN public.users u ON u.id=o.customer_id WHERE o.id=$1 AND u.email IS NOT NULL`, orderID, "Your order status is now "+status)
+    if err != nil {
+        return err
     }
 
     return tx.Commit(ctx)
+}
+
+func (r *pgRepo) RejectJob(ctx context.Context, partnerID, orderID string) error {
+    return dispatch.Reject(ctx, r.db, partnerID, orderID)
+}
+
+func (r *pgRepo) CurrentJobs(ctx context.Context, partnerID string) ([]*DeliveryJob, error) {
+    rows, err := r.db.Query(ctx, `SELECT o.id,m.name,COALESCE((SELECT address FROM merchants.merchant_branches b WHERE b.merchant_id=m.id LIMIT 1),''),COALESCE(o.delivery_address::text,''),o.delivery_fee,a.status,o.created_at FROM delivery.delivery_assignments a JOIN public.orders o ON o.id=a.order_id JOIN public.merchants m ON m.id=o.merchant_id WHERE a.partner_id=$1 AND a.status IN ('ASSIGNED','PICKED_UP','OUT_FOR_DELIVERY') ORDER BY a.created_at`, partnerID)
+    if err != nil {
+        return nil, err
+    }
+    defer rows.Close()
+    list := []*DeliveryJob{}
+    for rows.Next() {
+        var j DeliveryJob
+        if err = rows.Scan(&j.OrderID, &j.MerchantName, &j.MerchantAddress, &j.CustomerAddress, &j.DeliveryFee, &j.Status, &j.CreatedAt); err != nil {
+            return nil, err
+        }
+        list = append(list, &j)
+    }
+    return list, rows.Err()
 }
 
 func (r *pgRepo) GetEarningsSummary(ctx context.Context, partnerID string) (*RiderEarningsSummary, error) {
@@ -152,7 +201,7 @@ func (r *pgRepo) GetEarningsSummary(ctx context.Context, partnerID string) (*Rid
     var s RiderEarningsSummary
     err := r.db.QueryRow(ctx, query, partnerID).Scan(&s.TotalDeliveries, &s.TotalEarnings, &s.TodayEarnings, &s.TipsCollected)
     if err != nil {
-        return &RiderEarningsSummary{TotalDeliveries: 12, TotalEarnings: 4800, TodayEarnings: 1200, TipsCollected: 300}, nil
+        return nil, err
     }
     return &s, nil
 }
