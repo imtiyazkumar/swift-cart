@@ -28,7 +28,7 @@ type ProfileInput struct {
 
 func (r *pgRepo) Settings(ctx context.Context, merchant string) (json.RawMessage, error) {
     var result json.RawMessage
-    err := r.db.QueryRow(ctx, `SELECT json_build_object('name',m.name,'description',m.description,'phone',COALESCE(m.phone,''),'tags',m.tags,'address',COALESCE((SELECT address FROM merchants.merchant_branches WHERE merchant_id=m.id ORDER BY created_at LIMIT 1),''),'hours',COALESCE((SELECT json_agg(json_build_object('day',h.day_of_week,'opens',to_char(h.opens_at,'HH24:MI'),'closes',to_char(h.closes_at,'HH24:MI'),'closed',h.is_closed)) FROM merchants.merchant_operating_hours h JOIN merchants.merchant_branches b ON b.id=h.branch_id WHERE b.merchant_id=m.id),'[]'::json)) FROM public.merchants m WHERE id=$1`, merchant).Scan(&result)
+    err := r.db.QueryRow(ctx, `SELECT json_build_object('name',m.name,'description',m.description,'phone',COALESCE(m.phone,''),'tags',m.tags,'address',COALESCE((SELECT address FROM merchants.merchant_branches WHERE merchant_id=m.id AND deleted_at IS NULL ORDER BY created_at,id LIMIT 1),''),'hours',COALESCE((SELECT json_agg(json_build_object('day',h.day_of_week,'opens',to_char(h.opens_at,'HH24:MI'),'closes',to_char(h.closes_at,'HH24:MI'),'closed',h.is_closed)) FROM merchants.merchant_operating_hours h JOIN merchants.merchant_branches b ON b.id=h.branch_id WHERE b.merchant_id=m.id),'[]'::json)) FROM public.merchants m WHERE id=$1`, merchant).Scan(&result)
     return result, err
 }
 
@@ -58,7 +58,7 @@ func (r *pgRepo) SaveSettings(ctx context.Context, merchant string, input Profil
     if _, err = tx.Exec(ctx, `UPDATE public.merchants SET name=$2,description=$3,phone=$4,tags=$5,updated_at=now() WHERE id=$1`, merchant, input.Name, input.Description, input.Phone, input.Tags); err != nil {
         return err
     }
-    err = tx.QueryRow(ctx, `SELECT id FROM merchants.merchant_branches WHERE merchant_id=$1 ORDER BY created_at LIMIT 1 FOR UPDATE`, merchant).Scan(&branch)
+    err = tx.QueryRow(ctx, `SELECT id FROM merchants.merchant_branches WHERE merchant_id=$1 AND deleted_at IS NULL ORDER BY created_at,id LIMIT 1 FOR UPDATE`, merchant).Scan(&branch)
     if err == pgx.ErrNoRows {
         err = tx.QueryRow(ctx, `INSERT INTO merchants.merchant_branches(merchant_id,name,address) VALUES($1,$2,$3) RETURNING id`, merchant, input.Name, input.Address).Scan(&branch)
     } else if err == nil {

@@ -38,8 +38,8 @@ func (r *pgRepo) GetByOwnerID(ctx context.Context, ownerID string) (*RestaurantP
                m.onboarding_status, m.approval_status, m.tags, m.fee_payment_status,
                COALESCE(mb.address, ''), m.created_at
         FROM public.merchants m
-        LEFT JOIN merchants.merchant_branches mb ON m.id = mb.merchant_id
-        WHERE m.owner_id = $1 AND m.deleted_at IS NULL
+        LEFT JOIN LATERAL(SELECT address FROM merchants.merchant_branches WHERE merchant_id=m.id AND deleted_at IS NULL ORDER BY created_at,id LIMIT 1) mb ON true
+        WHERE m.owner_id = $1 AND m.deleted_at IS NULL ORDER BY m.created_at,m.id LIMIT 1
     `
     var p RestaurantProfile
     err := r.db.QueryRow(ctx, query, ownerID).Scan(

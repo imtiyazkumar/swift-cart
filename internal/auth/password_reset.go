@@ -5,6 +5,7 @@ import (
     "crypto/sha256"
     "encoding/hex"
     "net/url"
+    "os"
     "strings"
     "time"
 
@@ -32,10 +33,10 @@ func ForgotPassword(cfg *config.Config, logger *zap.Logger, dbPool *pgxpool.Pool
         }
 
         email := strings.ToLower(strings.TrimSpace(req.Email))
-        var userID string
+        var userID, role string
         err := dbPool.QueryRow(c.Request().Context(),
-            `SELECT id FROM public.users WHERE LOWER(email)=LOWER($1) AND deleted_at IS NULL`, email,
-        ).Scan(&userID)
+            `SELECT id,role FROM public.users WHERE LOWER(email)=LOWER($1) AND deleted_at IS NULL`, email,
+        ).Scan(&userID, &role)
         if err == pgx.ErrNoRows {
             return c.JSON(200, map[string]string{"message": passwordResetResponse})
         }
@@ -72,7 +73,14 @@ func ForgotPassword(cfg *config.Config, logger *zap.Logger, dbPool *pgxpool.Pool
             return echo.NewHTTPError(500, "could not process password reset")
         }
 
-        resetURL, err := url.Parse(cfg.PasswordResetURL)
+        targetURL := cfg.PasswordResetURL
+        if role == "MERCHANT_OWNER" && os.Getenv("RESTAURANT_PASSWORD_RESET_URL") != "" {
+            targetURL = os.Getenv("RESTAURANT_PASSWORD_RESET_URL")
+        }
+        if role == "DELIVERY_PARTNER" && os.Getenv("DELIVERY_PASSWORD_RESET_URL") != "" {
+            targetURL = os.Getenv("DELIVERY_PASSWORD_RESET_URL")
+        }
+        resetURL, err := url.Parse(targetURL)
         if err != nil {
             logger.Error("password reset URL is invalid", zap.Error(err))
             return echo.NewHTTPError(500, "could not process password reset")

@@ -34,6 +34,7 @@ type MenuItemInput struct {
     IsVeg       bool    `json:"is_veg"`
     Price       float64 `json:"price"` // In currency units e.g. 450.00
     IsAvailable bool    `json:"is_available"`
+    ImageURL    string  `json:"image_url,omitempty"`
 }
 
 type RestaurantOrder struct {

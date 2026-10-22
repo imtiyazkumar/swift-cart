@@ -15,7 +15,7 @@ yember/
 
 Existing uncommitted work was retained. Customer source/config/assets were moved
 together, rather than rebuilding the customer application. Existing customer
-routing remains; partner workflows use explicit conditional rendering. The admin
+routing remains; partner workflows use Expo Router tabs and protected routes. The admin
 web app uses React Router for pages and TanStack Query for server data.
 The persisted restaurant role remains `MERCHANT_OWNER` for schema compatibility.
 

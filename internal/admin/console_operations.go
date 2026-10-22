@@ -21,6 +21,13 @@ func (r *pgRepo) ConsoleOperation(ctx context.Context, actor, resource, id strin
     var changed string
     action := ""
     switch resource {
+    case "support":
+        action = "SUPPORT_STATUS_UPDATED"
+        status := "RESOLVED"
+        if enabled {
+            status = "OPEN"
+        }
+        err = tx.QueryRow(ctx, `UPDATE public.partner_support_tickets SET status=$2,updated_at=now() WHERE id=$1 RETURNING id`, id, status).Scan(&changed)
     case "reviews":
         action = "REVIEW_MODERATED"
         err = tx.QueryRow(ctx, `UPDATE merchants.restaurant_reviews SET hidden_at=CASE WHEN $2 THEN NULL ELSE now() END,hidden_by=$3,moderation_reason=$4 WHERE id=$1 RETURNING id`, id, enabled, actor, reason).Scan(&changed)

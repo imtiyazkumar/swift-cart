@@ -4,6 +4,7 @@ import (
     "context"
     "fmt"
     "github.com/imtiyazkumar/yember-core/internal/dispatch"
+    "math"
 
     "github.com/jackc/pgx/v5/pgxpool"
     "go.uber.org/zap"
@@ -33,15 +34,15 @@ func NewPostgresRepo(db *pgxpool.Pool, log *zap.Logger) Repository {
 func (r *pgRepo) GetRiderByUserID(ctx context.Context, userID string) (*RiderProfile, error) {
     query := `
         SELECT dp.id, dp.user_id, dp.name, dp.phone, dp.status, dp.approval_status,
-               COALESCE(v.vehicle_type, ''), COALESCE(v.registration_number, ''), dp.created_at
+               COALESCE(v.vehicle_type, ''), COALESCE(v.registration_number, ''), dp.created_at, dp.eligibility_expires_at
         FROM delivery.delivery_partners dp
-        LEFT JOIN delivery.vehicles v ON dp.id = v.partner_id
+        LEFT JOIN LATERAL(SELECT vehicle_type,registration_number FROM delivery.vehicles WHERE partner_id=dp.id ORDER BY id LIMIT 1) v ON true
         WHERE dp.user_id = $1 AND dp.deleted_at IS NULL
     `
     var p RiderProfile
     err := r.db.QueryRow(ctx, query, userID).Scan(
         &p.ID, &p.UserID, &p.Name, &p.Phone, &p.Status, &p.ApprovalStatus,
-        &p.VehicleType, &p.RegNumber, &p.CreatedAt,
+        &p.VehicleType, &p.RegNumber, &p.CreatedAt, &p.EligibilityExpiresAt,
     )
     if err != nil {
         return nil, err
@@ -53,15 +54,30 @@ func (r *pgRepo) UpdateStatus(ctx context.Context, partnerID, status string) err
     if status != "ONLINE" && status != "OFFLINE" {
         return fmt.Errorf("status must be ONLINE or OFFLINE")
     }
-    query := `UPDATE delivery.delivery_partners SET status = $1, updated_at = NOW() WHERE id = $2 AND deleted_at IS NULL AND (approval_status='APPROVED' OR $1='OFFLINE')`
-    tag, err := r.db.Exec(ctx, query, status, partnerID)
-    if err == nil && tag.RowsAffected() != 1 {
-        return fmt.Errorf("approval is required to go online")
+    tx, err := r.db.Begin(ctx)
+    if err != nil {
+        return err
     }
-    return err
+    defer tx.Rollback(ctx)
+    tag, err := tx.Exec(ctx, `UPDATE delivery.delivery_partners p SET status=$1,updated_at=now() WHERE id=$2 AND deleted_at IS NULL AND ($1='OFFLINE' OR (approval_status='APPROVED' AND (eligibility_expires_at IS NULL OR eligibility_expires_at>now()) AND EXISTS(SELECT 1 FROM delivery.vehicles WHERE partner_id=p.id AND is_active)))`, status, partnerID)
+    if err != nil {
+        return err
+    }
+    if tag.RowsAffected() != 1 {
+        return fmt.Errorf("approval, valid eligibility and an active vehicle are required to go online")
+    }
+    if status == "OFFLINE" {
+        if _, err = tx.Exec(ctx, `UPDATE delivery.offers SET status='EXPIRED',updated_at=now() WHERE partner_id=$1 AND status='PENDING'`, partnerID); err != nil {
+            return err
+        }
+    }
+    return tx.Commit(ctx)
 }
 
 func (r *pgRepo) RecordLocation(ctx context.Context, partnerID string, lat, lng float64) error {
+    if math.IsNaN(lat) || math.IsNaN(lng) || math.IsInf(lat, 0) || math.IsInf(lng, 0) || lat < -90 || lat > 90 || lng < -180 || lng > 180 {
+        return fmt.Errorf("valid latitude and longitude required")
+    }
     query := `INSERT INTO delivery.live_locations (partner_id, latitude, longitude) VALUES ($1, $2, $3)`
     _, err := r.db.Exec(ctx, query, partnerID, lat, lng)
     return err
@@ -70,10 +86,11 @@ func (r *pgRepo) RecordLocation(ctx context.Context, partnerID string, lat, lng 
 func (r *pgRepo) ListAvailableJobs(ctx context.Context) ([]*DeliveryJob, error) {
     query := `
         SELECT o.id, m.name, COALESCE(mb.address, ''),
-               c.name, COALESCE(o.delivery_fee, 0), o.status, o.created_at
+               c.name, COALESCE(o.delivery_fee, 0), o.status, o.created_at,
+               (SELECT expires_at FROM delivery.offers WHERE order_id=o.id AND partner_id=$1 AND status='PENDING' ORDER BY created_at DESC LIMIT 1)
         FROM public.orders o
         JOIN public.merchants m ON o.merchant_id = m.id
-        LEFT JOIN merchants.merchant_branches mb ON m.id = mb.merchant_id
+        LEFT JOIN LATERAL(SELECT address FROM merchants.merchant_branches WHERE merchant_id=m.id AND deleted_at IS NULL ORDER BY created_at,id LIMIT 1) mb ON true
         JOIN public.customers c ON o.customer_id = c.id
         WHERE EXISTS(SELECT 1 FROM delivery.offers f WHERE f.order_id=o.id AND f.partner_id=$1 AND f.status='PENDING' AND f.expires_at>now())
         ORDER BY o.created_at ASC
@@ -88,7 +105,7 @@ func (r *pgRepo) ListAvailableJobs(ctx context.Context) ([]*DeliveryJob, error) 
     for rows.Next() {
         var j DeliveryJob
         var addr string
-        err := rows.Scan(&j.OrderID, &j.MerchantName, &j.MerchantAddress, &j.CustomerName, &j.DeliveryFee, &j.Status, &j.CreatedAt)
+        err := rows.Scan(&j.OrderID, &j.MerchantName, &j.MerchantAddress, &j.CustomerName, &j.DeliveryFee, &j.Status, &j.CreatedAt, &j.ExpiresAt)
         if err != nil {
             return nil, err
         }

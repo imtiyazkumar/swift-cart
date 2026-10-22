@@ -60,6 +60,12 @@ func RequestVerification(pool *pgxpool.Pool) echo.HandlerFunc {
         }
         token := hex.EncodeToString(raw)
         verificationURL := os.Getenv("EMAIL_VERIFICATION_URL")
+        if c.Get("role") == "MERCHANT_OWNER" && os.Getenv("RESTAURANT_EMAIL_VERIFICATION_URL") != "" {
+            verificationURL = os.Getenv("RESTAURANT_EMAIL_VERIFICATION_URL")
+        }
+        if c.Get("role") == "DELIVERY_PARTNER" && os.Getenv("DELIVERY_EMAIL_VERIFICATION_URL") != "" {
+            verificationURL = os.Getenv("DELIVERY_EMAIL_VERIFICATION_URL")
+        }
         if verificationURL == "" {
             return echo.NewHTTPError(503, "EMAIL_VERIFICATION_URL is not configured")
         }

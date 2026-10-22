@@ -1,7 +1,7 @@
 # Admin console API
 
 `yember-web` is the independent React Router and TanStack Query application for
-this API. Apply all tracked migrations, including `031_review_moderation.sql`,
+this API. Apply all tracked migrations, including `032_partner_workspaces.sql`,
 before starting the updated Core binary. Existing databases must follow the
 migration/baseline procedure in [platform setup](platform-setup.md).
 
@@ -40,7 +40,7 @@ All routes below are under `/api/v1/admin` and require ADMIN authorization.
   hashes and email bodies.
 
 Resources: `customers`, `users`, `restaurants`, `partners`, `orders`, `payments`,
-`reviews`, `coupons`, `audit`, `emails`. IDs are validated as UUIDs. Payment
+`reviews`, `coupons`, `audit`, `emails`, `support`. IDs are validated as UUIDs. Payment
 projections include order payments and onboarding payments.
 
 ## Changes
@@ -48,16 +48,18 @@ projections include order payments and onboarding payments.
 Management changes validate a reason, execute with a fresh active ADMIN check,
 and commit the audit record in the same transaction.
 
-| Method and path | Body / behavior |
-| --- | --- |
-| `PATCH /manage/:resource/:id/profile` | `name`, `phone`, `reason`; restaurant `description`, `address`; partner `vehicle_type`, `registration_number` |
-| `POST /manage/:resource/:id/status` | For customers/users: `disabled`, `reason`; cannot disable self or the last administrator |
-| `POST /manage/:resource/:id/availability` | For restaurants/partners: `available`, `reason`; activation gates are checked |
-| `PUT /manage/restaurants/:id/items/:item` | `name`, `description`, `price` in minor units, `is_available`, `reason`; item must belong to restaurant |
-| `POST /manage/coupons` | Coupon terms plus `reason` |
-| `PUT /manage/coupons/:id` | Coupon terms plus `reason` |
-| `POST /manage/reviews/:id/operation` | `enabled` means published; `reason`; preserves original review and moderation audit |
-| `POST /manage/emails/:id/operation` | `enabled: true`, `reason`; failed messages less than 24 hours old with retained body only |
+| Method and path                           | Body / behavior                                                                                               |
+| ----------------------------------------- | ------------------------------------------------------------------------------------------------------------- |
+| `PATCH /manage/:resource/:id/profile`     | `name`, `phone`, `reason`; restaurant `description`, `address`; partner `vehicle_type`, `registration_number` |
+| `POST /manage/:resource/:id/status`       | For customers/users: `disabled`, `reason`; cannot disable self or the last administrator                      |
+| `POST /manage/:resource/:id/availability` | For restaurants/partners: `available`, `reason`; activation gates are checked                                 |
+| `PUT /manage/restaurants/:id/items/:item` | `name`, `description`, `price` in minor units, `is_available`, `reason`; item must belong to restaurant       |
+| `POST /manage/coupons`                    | Coupon terms plus `reason`                                                                                    |
+| `PUT /manage/coupons/:id`                 | Coupon terms plus `reason`                                                                                    |
+| `POST /manage/reviews/:id/operation`      | `enabled` means published; `reason`; preserves original review and moderation audit                           |
+| `POST /manage/emails/:id/operation`       | `enabled: true`, `reason`; failed messages less than 24 hours old with retained body only                     |
+| `POST /manage/support/:id/operation`      | `enabled: false` resolves; `true` reopens; requires an audit reason                                           |
+| `POST /partner-support/:id/messages`      | `body`; writes an operator reply and marks the case in progress atomically with an audit event                |
 
 Existing approval, suspension, user role, fee/dispatch settings and order
 cancellation endpoints remain in use. Disabling an account revokes refresh

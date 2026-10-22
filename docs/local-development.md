@@ -16,7 +16,7 @@ ignored. The root mobile file is a public endpoint reference only.
 | Development | `yember_local`      | `http://127.0.0.1:8080` | `http://127.0.0.1:5173` |
 | Test        | `yember_local_test` | `http://127.0.0.1:8084` | `http://127.0.0.1:5174` |
 
-Both databases were created, migrated through 031 (plus the legacy auth migration),
+Both databases were created, migrated through 032 (plus the legacy auth migration),
 and seeded locally. The old application database was not reset or migrated.
 Each profile has a different generated JWT secret. Local HTTP uses
 `ADMIN_COOKIE_SECURE=false`; live email is disabled and provider credentials are
@@ -109,3 +109,8 @@ The admin homepage is `/` after sign-in: live totals, fulfillment statuses,
 seven UTC days of order volume, action center, quick actions, recent orders,
 recorded delivered value, and audited admin activity. Status links open filtered
 order pages. The dashboard polls every 30 seconds and supports manual refresh.
+
+Restaurant and delivery now have protected Expo Router tabs and detail pages.
+Restart their Expo servers after this upgrade. The admin support inbox connects
+to the same partner case conversations. See [partner workspaces](partner-apps.md)
+for tab features, research references, validation and remaining release work.

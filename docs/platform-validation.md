@@ -2,6 +2,23 @@
 
 ## Passed locally
 
+- Partner workspaces now have five protected Expo Router tabs each, routed detail
+  and management screens, native SecureStore sessions, foreground-only optional
+  location sharing, business/earnings periods and durable operator support cases.
+- Migration 032 and partner API workflows passed isolated PostgreSQL tests for
+  ownership, history pagination, zero-filled daily analytics, completed-delivery
+  contact restriction, review replies, idempotent case creation, operator replies,
+  case reopening, account edits and password/refresh revocation.
+- All six mobile session tests passed for role checks, refresh-credential storage,
+  concurrent rotation, sign-out races (including delayed storage writes) and
+  transient startup recovery. Partner availability tests cover eligibility,
+  coordinate validation and pending-offer expiry while preserving active work.
+- Both updated partner apps exported successfully for Android, iOS and web.
+  The running local API was upgraded, and both partner workspaces plus the admin
+  support inbox passed authenticated HTTP checks. Migration 032 is applied to
+  both dedicated local databases. No browser/device surface was available for
+  visual or interactive QA in this session.
+
 - Dedicated `yember_local` and `yember_local_test` databases were created,
   migrated and seeded. Both Core profiles have real ignored env files; every client app
   also has development/test env files and tracked templates.
@@ -43,7 +60,7 @@
 ## Real PostgreSQL workflows exercised
 
 Tests created uniquely named disposable `yember_test_*` databases, applied all
-non-demo SQL migrations through 031 plus the legacy auth migration, and removed
+non-demo SQL migrations through 032 plus the legacy auth migration, and removed
 only those disposable test databases. The two intentionally persistent local
 fixture databases are retained for development and manual testing.
 
