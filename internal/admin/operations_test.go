@@ -20,6 +20,7 @@ func TestDecisionValidation(t *testing.T) {
 
 func TestApprovalIsAtomicAndDoesNotActivate(t *testing.T) {
     pool := testdb.New(t)
+    testdb.Station(t, pool)
     ctx := context.Background()
     var actor, owner, merchant string
     if err := pool.QueryRow(ctx, `INSERT INTO public.users(email,password_hash,role) VALUES('admin@test.invalid','hash','ADMIN') RETURNING id`).Scan(&actor); err != nil {
@@ -28,7 +29,7 @@ func TestApprovalIsAtomicAndDoesNotActivate(t *testing.T) {
     if err := pool.QueryRow(ctx, `INSERT INTO public.users(email,password_hash,role) VALUES('owner@test.invalid','hash','MERCHANT_OWNER') RETURNING id`).Scan(&owner); err != nil {
         t.Fatal(err)
     }
-    if err := pool.QueryRow(ctx, `INSERT INTO public.merchants(name,email,owner_id,is_active) VALUES('Test Kitchen','kitchen@test.invalid',$1,false) RETURNING id`, owner).Scan(&merchant); err != nil {
+    if err := pool.QueryRow(ctx, `INSERT INTO public.merchants(name,email,owner_id,is_active,latitude,longitude) VALUES('Test Kitchen','kitchen@test.invalid',$1,false,34,74) RETURNING id`, owner).Scan(&merchant); err != nil {
         t.Fatal(err)
     }
     svc := NewService(NewPostgresRepo(pool, zap.NewNop()))

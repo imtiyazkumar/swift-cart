@@ -3,6 +3,7 @@ package restaurant
 import (
     "context"
     "fmt"
+    "github.com/imtiyazkumar/yember-core/internal/stations"
     "github.com/jackc/pgx/v5/pgxpool"
     "go.uber.org/zap"
     "math"
@@ -36,7 +37,7 @@ func (r *pgRepo) GetByOwnerID(ctx context.Context, ownerID string) (*RestaurantP
     query := `
         SELECT m.id, m.owner_id, m.name, m.merchant_type, m.is_active,
                m.onboarding_status, m.approval_status, m.tags, m.fee_payment_status,
-               COALESCE(mb.address, ''), m.created_at
+               COALESCE(mb.address, ''), m.created_at,m.station_id
         FROM public.merchants m
         LEFT JOIN LATERAL(SELECT address FROM merchants.merchant_branches WHERE merchant_id=m.id AND deleted_at IS NULL ORDER BY created_at,id LIMIT 1) mb ON true
         WHERE m.owner_id = $1 AND m.deleted_at IS NULL ORDER BY m.created_at,m.id LIMIT 1
@@ -45,7 +46,7 @@ func (r *pgRepo) GetByOwnerID(ctx context.Context, ownerID string) (*RestaurantP
     err := r.db.QueryRow(ctx, query, ownerID).Scan(
         &p.ID, &p.OwnerID, &p.Name, &p.MerchantType, &p.IsActive,
         &p.OnboardingStatus, &p.ApprovalStatus, &p.Tags, &p.FeePaymentStatus,
-        &p.BranchAddress, &p.CreatedAt,
+        &p.BranchAddress, &p.CreatedAt, &p.StationID,
     )
     if err != nil {
         return nil, err
@@ -54,12 +55,27 @@ func (r *pgRepo) GetByOwnerID(ctx context.Context, ownerID string) (*RestaurantP
 }
 
 func (r *pgRepo) UpdateStatus(ctx context.Context, merchantID string, isActive bool) error {
-    query := `UPDATE public.merchants SET is_active = $1, updated_at = NOW() WHERE id = $2 AND approval_status='APPROVED' AND (NOT $1 OR fee_payment_status='PAID')`
-    tag, err := r.db.Exec(ctx, query, isActive, merchantID)
-    if err == nil && tag.RowsAffected() != 1 {
-        return fmt.Errorf("restaurant must be approved and onboarding payment verified before opening")
+    tx, err := r.db.Begin(ctx)
+    if err != nil {
+        return err
     }
-    return err
+    defer tx.Rollback(ctx)
+    if err = stations.LockCoverage(ctx, tx); err != nil {
+        return err
+    }
+    if isActive {
+        if err = stations.ValidateRestaurant(ctx, tx, merchantID); err != nil {
+            return err
+        }
+    }
+    tag, err := tx.Exec(ctx, `UPDATE public.merchants SET is_active=$1,updated_at=now() WHERE id=$2 AND approval_status='APPROVED' AND (NOT $1 OR fee_payment_status='PAID')`, isActive, merchantID)
+    if err != nil {
+        return err
+    }
+    if tag.RowsAffected() != 1 {
+        return fmt.Errorf("restaurant must be approved, paid and inside its assigned active station before opening")
+    }
+    return tx.Commit(ctx)
 }
 
 func (r *pgRepo) ListCategories(ctx context.Context, merchantID string) ([]*MenuCategory, error) {

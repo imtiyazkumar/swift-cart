@@ -126,3 +126,5 @@ Exports validate Android/iOS Hermes and web bundling; they do not establish devi
 interaction, location accuracy, app-store signing or production payment safety.
 Signed builds, device/permission tests, production observability, external provider
 configuration and operational financial policies remain release prerequisites.
+
+Operational station setup and strict coverage contracts: [stations](stations.md).

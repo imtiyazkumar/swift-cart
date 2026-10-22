@@ -4,6 +4,7 @@ import (
     "context"
     "encoding/json"
     "errors"
+    "github.com/imtiyazkumar/yember-core/internal/stations"
     "strings"
     "time"
 
@@ -18,6 +19,8 @@ type OperatingHour struct {
     Closed bool   `json:"closed"`
 }
 type ProfileInput struct {
+    Latitude    *float64        `json:"latitude"`
+    Longitude   *float64        `json:"longitude"`
     Name        string          `json:"name"`
     Description string          `json:"description"`
     Phone       string          `json:"phone"`
@@ -28,7 +31,7 @@ type ProfileInput struct {
 
 func (r *pgRepo) Settings(ctx context.Context, merchant string) (json.RawMessage, error) {
     var result json.RawMessage
-    err := r.db.QueryRow(ctx, `SELECT json_build_object('name',m.name,'description',m.description,'phone',COALESCE(m.phone,''),'tags',m.tags,'address',COALESCE((SELECT address FROM merchants.merchant_branches WHERE merchant_id=m.id AND deleted_at IS NULL ORDER BY created_at,id LIMIT 1),''),'hours',COALESCE((SELECT json_agg(json_build_object('day',h.day_of_week,'opens',to_char(h.opens_at,'HH24:MI'),'closes',to_char(h.closes_at,'HH24:MI'),'closed',h.is_closed)) FROM merchants.merchant_operating_hours h JOIN merchants.merchant_branches b ON b.id=h.branch_id WHERE b.merchant_id=m.id),'[]'::json)) FROM public.merchants m WHERE id=$1`, merchant).Scan(&result)
+    err := r.db.QueryRow(ctx, `SELECT json_build_object('latitude',m.latitude,'longitude',m.longitude,'station_id',m.station_id,'name',m.name,'description',m.description,'phone',COALESCE(m.phone,''),'tags',m.tags,'address',COALESCE((SELECT address FROM merchants.merchant_branches WHERE merchant_id=m.id AND deleted_at IS NULL ORDER BY created_at,id LIMIT 1),''),'hours',COALESCE((SELECT json_agg(json_build_object('day',h.day_of_week,'opens',to_char(h.opens_at,'HH24:MI'),'closes',to_char(h.closes_at,'HH24:MI'),'closed',h.is_closed)) FROM merchants.merchant_operating_hours h JOIN merchants.merchant_branches b ON b.id=h.branch_id WHERE b.merchant_id=m.id),'[]'::json)) FROM public.merchants m WHERE id=$1`, merchant).Scan(&result)
     return result, err
 }
 
@@ -54,6 +57,9 @@ func (r *pgRepo) SaveSettings(ctx context.Context, merchant string, input Profil
         return err
     }
     defer tx.Rollback(ctx)
+    if err = stations.UpdateRestaurantLocation(ctx, tx, merchant, input.Address, input.Latitude, input.Longitude); err != nil {
+        return err
+    }
     var branch string
     if _, err = tx.Exec(ctx, `UPDATE public.merchants SET name=$2,description=$3,phone=$4,tags=$5,updated_at=now() WHERE id=$1`, merchant, input.Name, input.Description, input.Phone, input.Tags); err != nil {
         return err
@@ -62,7 +68,7 @@ func (r *pgRepo) SaveSettings(ctx context.Context, merchant string, input Profil
     if err == pgx.ErrNoRows {
         err = tx.QueryRow(ctx, `INSERT INTO merchants.merchant_branches(merchant_id,name,address) VALUES($1,$2,$3) RETURNING id`, merchant, input.Name, input.Address).Scan(&branch)
     } else if err == nil {
-        _, err = tx.Exec(ctx, `UPDATE merchants.merchant_branches SET name=$2,address=$3,updated_at=now() WHERE id=$1`, branch, input.Name, input.Address)
+        _, err = tx.Exec(ctx, `UPDATE merchants.merchant_branches SET name=$2,address=$3,latitude=(SELECT latitude FROM public.merchants WHERE id=merchant_id),longitude=(SELECT longitude FROM public.merchants WHERE id=merchant_id),updated_at=now() WHERE id=$1`, branch, input.Name, input.Address)
     }
     if err != nil {
         return err

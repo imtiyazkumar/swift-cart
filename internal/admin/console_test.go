@@ -16,6 +16,7 @@ import (
 
 func TestConsoleManagementAndAudit(t *testing.T) {
     pool := testdb.New(t)
+    testdb.Station(t, pool)
     ctx := context.Background()
     repo := &pgRepo{db: pool, log: zap.NewNop()}
     var actor, customer, owner, restaurant, category, item, partnerUser, partner string
@@ -30,7 +31,7 @@ func TestConsoleManagementAndAudit(t *testing.T) {
     if _, err := pool.Exec(ctx, `INSERT INTO public.customers(id,user_id,email,name) VALUES($1,$1,'customer@test.invalid','Customer')`, customer); err != nil {
         t.Fatal(err)
     }
-    if err := pool.QueryRow(ctx, `INSERT INTO public.merchants(name,email,owner_id,is_active,approval_status) VALUES('Kitchen','kitchen@test.invalid',$1,false,'APPROVED') RETURNING id`, owner).Scan(&restaurant); err != nil {
+    if err := pool.QueryRow(ctx, `INSERT INTO public.merchants(name,email,owner_id,is_active,approval_status,latitude,longitude) VALUES('Kitchen','kitchen@test.invalid',$1,false,'APPROVED',34,74) RETURNING id`, owner).Scan(&restaurant); err != nil {
         t.Fatal(err)
     }
     if err := pool.QueryRow(ctx, `INSERT INTO catalog.categories(merchant_id,name) VALUES($1,'Meals') RETURNING id`, restaurant).Scan(&category); err != nil {
@@ -39,7 +40,7 @@ func TestConsoleManagementAndAudit(t *testing.T) {
     if err := pool.QueryRow(ctx, `INSERT INTO catalog.items(merchant_id,category_id,name,base_price) VALUES($1,$2,'Lunch',25000) RETURNING id`, restaurant, category).Scan(&item); err != nil {
         t.Fatal(err)
     }
-    if err := pool.QueryRow(ctx, `INSERT INTO delivery.delivery_partners(user_id,name,phone,approval_status) VALUES($1,'Partner','1234567890','APPROVED') RETURNING id`, partnerUser).Scan(&partner); err != nil {
+    if err := pool.QueryRow(ctx, `INSERT INTO delivery.delivery_partners(user_id,name,phone,approval_status,station_id) VALUES($1,'Partner','1234567890','APPROVED','20000000-0000-4000-a000-000000000001') RETURNING id`, partnerUser).Scan(&partner); err != nil {
         t.Fatal(err)
     }
     if _, err := pool.Exec(ctx, `INSERT INTO delivery.vehicles(partner_id,vehicle_type,registration_number) VALUES($1,'BIKE','TEST')`, partner); err != nil {
@@ -88,14 +89,14 @@ func TestConsoleManagementAndAudit(t *testing.T) {
     if err = repo.ConsoleEditProfile(ctx, actor, "customers", customer, ProfileEdit{Name: "Updated customer", Phone: "1234567890", Reason: "Contact corrected"}); err != nil {
         t.Fatal(err)
     }
-    if err = repo.ConsoleEditProfile(ctx, actor, "restaurants", restaurant, ProfileEdit{Name: "Kitchen", Address: "Primary address", Reason: "Record branch address"}); err != nil {
+    if err = repo.ConsoleEditProfile(ctx, actor, "restaurants", restaurant, ProfileEdit{Name: "Kitchen", Latitude: ptr(34), Longitude: ptr(74), Address: "Primary address", Reason: "Record branch address"}); err != nil {
         t.Fatal(err)
     }
     var secondary string
     if err = pool.QueryRow(ctx, `INSERT INTO merchants.merchant_branches(merchant_id,name,address,created_at) VALUES($1,'Second branch','Keep this address',now()+interval '1 second') RETURNING id`, restaurant).Scan(&secondary); err != nil {
         t.Fatal(err)
     }
-    if err = repo.ConsoleEditProfile(ctx, actor, "restaurants", restaurant, ProfileEdit{Name: "Kitchen", Address: "Corrected primary address", Reason: "Correct primary branch"}); err != nil {
+    if err = repo.ConsoleEditProfile(ctx, actor, "restaurants", restaurant, ProfileEdit{Name: "Kitchen", Latitude: ptr(34), Longitude: ptr(74), Address: "Corrected primary address", Reason: "Correct primary branch"}); err != nil {
         t.Fatal(err)
     }
     var address string
@@ -192,3 +193,5 @@ func TestConsoleManagementAndAudit(t *testing.T) {
         t.Fatal("management changes lack audit records")
     }
 }
+
+func ptr(v float64) *float64 { return &v }

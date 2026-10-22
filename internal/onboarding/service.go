@@ -7,10 +7,14 @@ import (
     "strings"
 
     "github.com/google/uuid"
+    "github.com/imtiyazkumar/yember-core/internal/stations"
     "github.com/jackc/pgx/v5/pgxpool"
 )
 
 type Application struct {
+    Latitude           *float64 `json:"latitude"`
+    Longitude          *float64 `json:"longitude"`
+    StationID          string   `json:"station_id"`
     Name               string   `json:"name"`
     Phone              string   `json:"phone"`
     Address            string   `json:"address"`
@@ -61,6 +65,28 @@ func (s *Service) Submit(ctx context.Context, userID, kind string, a Application
         return "", err
     }
     defer tx.Rollback(ctx)
+    if err = stations.LockCoverage(ctx, tx); err != nil {
+        return "", err
+    }
+    var stationID string
+    if kind == "restaurant" {
+        stationID, err = stations.Resolve(ctx, tx, a.Latitude, a.Longitude)
+        if err != nil {
+            return "", err
+        }
+    } else {
+        if _, err = uuid.Parse(a.StationID); err != nil {
+            return "", errors.New("select an active operational station")
+        }
+        var active bool
+        if err = tx.QueryRow(ctx, `SELECT EXISTS(SELECT 1 FROM public.stations WHERE id=$1 AND active)`, a.StationID).Scan(&active); err != nil {
+            return "", err
+        }
+        if !active {
+            return "", errors.New("select an active operational station")
+        }
+        stationID = a.StationID
+    }
     var email string
     if err = tx.QueryRow(ctx, `SELECT email FROM public.users WHERE id=$1 AND email_verified_at IS NOT NULL AND disabled_at IS NULL AND deleted_at IS NULL FOR UPDATE`, userID).Scan(&email); err != nil {
         return "", errors.New("verify your email before submitting an application")
@@ -81,12 +107,12 @@ func (s *Service) Submit(ctx context.Context, userID, kind string, a Application
     }
     var id string
     if kind == "restaurant" {
-        err = tx.QueryRow(ctx, `INSERT INTO public.merchants(name,email,phone,owner_id,merchant_type,onboarding_status,approval_status,is_active,tags) VALUES($1,$2,$3,$4,'RESTAURANT','SUBMITTED','PENDING',false,$5) RETURNING id`, a.Name, email, a.Phone, userID, a.Cuisine).Scan(&id)
+        err = tx.QueryRow(ctx, `INSERT INTO public.merchants(name,email,phone,owner_id,merchant_type,onboarding_status,approval_status,is_active,tags,station_id,latitude,longitude) VALUES($1,$2,$3,$4,'RESTAURANT','SUBMITTED','PENDING',false,$5,$6,$7,$8) RETURNING id`, a.Name, email, a.Phone, userID, a.Cuisine, stationID, a.Latitude, a.Longitude).Scan(&id)
         if err == nil {
-            _, err = tx.Exec(ctx, `INSERT INTO merchants.merchant_branches(merchant_id,name,address,is_active,created_by) VALUES($1,$2,$3,false,$4)`, id, a.Name, a.Address, userID)
+            _, err = tx.Exec(ctx, `INSERT INTO merchants.merchant_branches(merchant_id,name,address,is_active,created_by,latitude,longitude) VALUES($1,$2,$3,false,$4,$5,$6)`, id, a.Name, a.Address, userID, a.Latitude, a.Longitude)
         }
     } else if kind == "delivery" {
-        err = tx.QueryRow(ctx, `INSERT INTO delivery.delivery_partners(user_id,name,phone,status,approval_status) VALUES($1,$2,$3,'OFFLINE','PENDING') RETURNING id`, userID, a.Name, a.Phone).Scan(&id)
+        err = tx.QueryRow(ctx, `INSERT INTO delivery.delivery_partners(user_id,name,phone,status,approval_status,station_id) VALUES($1,$2,$3,'OFFLINE','PENDING',$4) RETURNING id`, userID, a.Name, a.Phone, stationID).Scan(&id)
         if err == nil {
             _, err = tx.Exec(ctx, `INSERT INTO delivery.vehicles(partner_id,vehicle_type,registration_number) VALUES($1,$2,$3)`, id, a.VehicleType, a.RegistrationNumber)
         }
@@ -96,6 +122,7 @@ func (s *Service) Submit(ctx context.Context, userID, kind string, a Application
     if err != nil {
         return "", err
     }
+    a.StationID = stationID
     data, err := json.Marshal(a)
     if err != nil {
         return "", err

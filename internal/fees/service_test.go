@@ -41,6 +41,7 @@ func TestWebhookSignatureRejectsTamperingAndReplay(t *testing.T) {
 
 func TestCheckoutAndVerifiedActivationAreIdempotent(t *testing.T) {
     pool := testdb.New(t)
+    testdb.Station(t, pool)
     ctx := context.Background()
     var owner, admin, merchant string
     if err := pool.QueryRow(ctx, `INSERT INTO public.users(email,password_hash,role) VALUES('owner@test.invalid','hash','MERCHANT_OWNER') RETURNING id`).Scan(&owner); err != nil {
@@ -49,7 +50,7 @@ func TestCheckoutAndVerifiedActivationAreIdempotent(t *testing.T) {
     if err := pool.QueryRow(ctx, `INSERT INTO public.users(email,password_hash,role) VALUES('admin@test.invalid','hash','ADMIN') RETURNING id`).Scan(&admin); err != nil {
         t.Fatal(err)
     }
-    if err := pool.QueryRow(ctx, `INSERT INTO public.merchants(name,email,owner_id,is_active,approval_status) VALUES('Kitchen','k@test.invalid',$1,false,'APPROVED') RETURNING id`, owner).Scan(&merchant); err != nil {
+    if err := pool.QueryRow(ctx, `INSERT INTO public.merchants(name,email,owner_id,is_active,approval_status,latitude,longitude) VALUES('Kitchen','k@test.invalid',$1,false,'APPROVED',34,74) RETURNING id`, owner).Scan(&merchant); err != nil {
         t.Fatal(err)
     }
     var requests atomic.Int32

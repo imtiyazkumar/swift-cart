@@ -2,6 +2,7 @@ package delivery
 
 import (
 	"context"
+	"github.com/imtiyazkumar/yember-core/internal/rider"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 	"go.uber.org/zap"
@@ -17,8 +18,7 @@ func NewPostgresRepo(db *pgxpool.Pool, log *zap.Logger) Repository {
 }
 
 func (r *pgRepo) UpsertAvailability(ctx context.Context, partnerID, status string) error {
-	_, err := r.db.Exec(ctx, `UPDATE delivery.delivery_partners SET status=$1, updated_at=now() WHERE id=$2`, status, partnerID)
-	return err
+	return rider.NewPostgresRepo(r.db, r.log).UpdateStatus(ctx, partnerID, status)
 }
 
 func (r *pgRepo) SaveLocation(ctx context.Context, u LocationUpdate) error {

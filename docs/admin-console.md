@@ -85,3 +85,5 @@ rotation/replay protection and logout invalidation.
 
 The new migration was validated in isolated databases; installation into an
 existing application database is an explicit operator startup step.
+
+Operational station setup and strict coverage contracts: [stations](stations.md).

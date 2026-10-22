@@ -22,6 +22,7 @@ import (
 
 func TestPartnerSignupVerificationUploadAndAdminReview(t *testing.T) {
     pool := testdb.New(t)
+    testdb.Station(t, pool)
     ctx := context.Background()
     e := echo.New()
     log := zap.NewNop()
@@ -84,7 +85,7 @@ func TestPartnerSignupVerificationUploadAndAdminReview(t *testing.T) {
         ID string `json:"id"`
     }
     _ = json.Unmarshal(rec.Body.Bytes(), &document)
-    application := map[string]interface{}{"name": "Real Test Kitchen", "phone": "1234567890", "address": "Test address", "description": "Test kitchen", "license_number": "TEST-LICENSE", "cuisine": []string{"Test"}, "document_ids": []string{document.ID}}
+    application := map[string]interface{}{"latitude": 34, "longitude": 74, "name": "Real Test Kitchen", "phone": "1234567890", "address": "Test address", "description": "Test kitchen", "license_number": "TEST-LICENSE", "cuisine": []string{"Test"}, "document_ids": []string{document.ID}}
     submitted := request("POST", "/api/v1/onboarding/application", access, application, 201)
     request("POST", "/api/v1/onboarding/application", access, application, 400)
     request("GET", "/api/v1/onboarding/documents/"+document.ID, access, nil, 200)

@@ -3,6 +3,7 @@ package rider
 import "time"
 
 type RiderProfile struct {
+    StationID            *string    `json:"station_id"`
     ID                   string     `json:"id"`
     UserID               string     `json:"user_id"`
     Name                 string     `json:"name"`

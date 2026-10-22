@@ -1,6 +1,8 @@
 package customer
 
 import (
+	"github.com/imtiyazkumar/yember-core/internal/checkout"
+	"github.com/imtiyazkumar/yember-core/internal/stations"
 	"net/http"
 	"strconv"
 
@@ -13,6 +15,16 @@ import (
 func RegisterRoutes(g *echo.Group, cfg *config.Config, logg *zap.Logger, svc *Service) {
 	// List restaurants for customer discovery
 	g.GET("/restaurants", func(c echo.Context) error {
+		repo, ok := svc.repo.(*pgRepo)
+		if !ok {
+			return echo.NewHTTPError(503, "station resolution unavailable")
+		}
+		station, err := stations.AddressStation(c, repo.db, c.QueryParam("address_id"))
+		if err != nil {
+			return echo.NewHTTPError(400, err.Error())
+		}
+		c.SetRequest(c.Request().WithContext(stations.WithStation(c.Request().Context(), station)))
+
 		city := c.QueryParam("city")
 		search := c.QueryParam("search")
 		list, err := svc.ListRestaurants(c.Request().Context(), city, search)
@@ -25,6 +37,16 @@ func RegisterRoutes(g *echo.Group, cfg *config.Config, logg *zap.Logger, svc *Se
 
 	// Get specific restaurant with menu
 	g.GET("/restaurants/:id", func(c echo.Context) error {
+		repo, ok := svc.repo.(*pgRepo)
+		if !ok {
+			return echo.NewHTTPError(503, "station resolution unavailable")
+		}
+		station, err := stations.AddressStation(c, repo.db, c.QueryParam("address_id"))
+		if err != nil {
+			return echo.NewHTTPError(400, err.Error())
+		}
+		c.SetRequest(c.Request().WithContext(stations.WithStation(c.Request().Context(), station)))
+
 		id := c.Param("id")
 		rest, err := svc.GetRestaurant(c.Request().Context(), id)
 		if err != nil {
@@ -157,12 +179,14 @@ func RegisterRoutes(g *echo.Group, cfg *config.Config, logg *zap.Logger, svc *Se
 
 	g.POST("/addresses", func(c echo.Context) error {
 		var req struct {
-			CustomerID   string `json:"customer_id"`
-			Label        string `json:"label"`
-			AddressLine1 string `json:"address_line1"`
-			City         string `json:"city"`
-			State        string `json:"state"`
-			PostalCode   string `json:"postal_code"`
+			CustomerID   string   `json:"customer_id"`
+			Latitude     *float64 `json:"latitude"`
+			Longitude    *float64 `json:"longitude"`
+			Label        string   `json:"label"`
+			AddressLine1 string   `json:"address_line1"`
+			City         string   `json:"city"`
+			State        string   `json:"state"`
+			PostalCode   string   `json:"postal_code"`
 		}
 		if err := c.Bind(&req); err != nil {
 			return echo.NewHTTPError(http.StatusBadRequest, "invalid request body")
@@ -177,11 +201,19 @@ func RegisterRoutes(g *echo.Group, cfg *config.Config, logg *zap.Logger, svc *Se
 		if req.City == "" || req.State == "" || req.PostalCode == "" {
 			return echo.NewHTTPError(http.StatusBadRequest, "city, state, and postal_code are required")
 		}
-		if err := svc.AddAddress(c.Request().Context(), req.CustomerID, req.Label, req.AddressLine1, req.City, req.State, req.PostalCode); err != nil {
+		repo, ok := svc.repo.(*pgRepo)
+		if !ok {
+			return echo.NewHTTPError(503, "address service unavailable")
+		}
+		if err := stations.Coordinates(req.Latitude, req.Longitude); err != nil {
+			return echo.NewHTTPError(400, err.Error())
+		}
+		id, err := checkout.New(repo.db).AddAddress(c.Request().Context(), req.CustomerID, req.Label, req.AddressLine1, "", req.City, req.State, req.PostalCode, req.Latitude, req.Longitude)
+		if err != nil {
 			logg.Error("add address failed", zap.Error(err))
 			return echo.NewHTTPError(http.StatusInternalServerError, err.Error())
 		}
-		return c.JSON(http.StatusCreated, map[string]interface{}{"success": true, "message": "address saved successfully"})
+		return c.JSON(http.StatusCreated, map[string]interface{}{"id": id, "success": true, "message": "address saved successfully"})
 	})
 
 	g.GET("/addresses", func(c echo.Context) error {

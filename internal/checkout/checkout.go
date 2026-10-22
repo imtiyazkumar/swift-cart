@@ -4,6 +4,7 @@ import (
     "context"
     "errors"
     "fmt"
+    "github.com/imtiyazkumar/yember-core/internal/stations"
     "os"
     "time"
 
@@ -45,7 +46,7 @@ type OrderListItem struct {
     CreatedAt    time.Time `json:"created_at"`
 }
 
-func (s *Service) Add(ctx context.Context, customerID, itemID string, quantity int) error {
+func (s *Service) Add(ctx context.Context, customerID, itemID string, quantity int, addressIDs ...string) error {
     if quantity < 1 || quantity > 99 {
         return errors.New("quantity must be between 1 and 99")
     }
@@ -54,8 +55,18 @@ func (s *Service) Add(ctx context.Context, customerID, itemID string, quantity i
         return err
     }
     defer tx.Rollback(ctx)
+    if err = stations.LockCoverage(ctx, tx); err != nil {
+        return err
+    }
     var lockedID string
     if err = tx.QueryRow(ctx, `SELECT id FROM public.users WHERE id=$1 FOR UPDATE`, customerID).Scan(&lockedID); err != nil {
+        return err
+    }
+    if len(addressIDs) != 1 || addressIDs[0] == "" {
+        return errors.New("select a delivery address before adding items")
+    }
+    station, err := stations.OwnedAddress(ctx, tx, customerID, addressIDs[0])
+    if err != nil {
         return err
     }
     var merchantID string
@@ -63,6 +74,10 @@ func (s *Service) Add(ctx context.Context, customerID, itemID string, quantity i
     err = tx.QueryRow(ctx, `SELECT merchant_id,currency FROM catalog.items WHERE id=$1 AND is_available AND deleted_at IS NULL`, itemID).Scan(&merchantID, &currency)
     if err != nil {
         return errors.New("item is unavailable")
+    }
+    var eligible bool
+    if err = tx.QueryRow(ctx, `SELECT station_id=$2 AND COALESCE(public.station_covers(station_id,latitude,longitude),false) AND is_active AND approval_status='APPROVED' AND deleted_at IS NULL FROM public.merchants WHERE id=$1 FOR SHARE`, merchantID, station).Scan(&eligible); err != nil || !eligible {
+        return errors.New("this restaurant does not deliver to the selected address")
     }
     if currency != "INR" {
         return errors.New("only INR items can be checked out")
@@ -75,6 +90,9 @@ func (s *Service) Add(ctx context.Context, customerID, itemID string, quantity i
         return errors.New("cart already contains items from another restaurant; clear it before switching")
     }
     if err != nil {
+        return err
+    }
+    if _, err = tx.Exec(ctx, `UPDATE orders.carts SET delivery_address_id=$2 WHERE id=$1`, cartID, addressIDs[0]); err != nil {
         return err
     }
     // The cart row is locked above, and the customer row is locked for the
@@ -198,6 +216,9 @@ func (s *Service) Checkout(ctx context.Context, customerID, addressID, idempoten
         return nil, err
     }
     defer tx.Rollback(ctx)
+    if err = stations.LockCoverage(ctx, tx); err != nil {
+        return nil, err
+    }
     if _, err = tx.Exec(ctx, `SELECT pg_advisory_xact_lock(hashtextextended($1,0))`, customerID+":"+idempotencyKey); err != nil {
         return nil, err
     }
@@ -213,6 +234,10 @@ func (s *Service) Checkout(ctx context.Context, customerID, addressID, idempoten
     if err != pgx.ErrNoRows {
         return nil, err
     }
+    stationID, err := stations.OwnedAddress(ctx, tx, customerID, addressID)
+    if err != nil {
+        return nil, err
+    }
     var address []byte
     err = tx.QueryRow(ctx, `SELECT jsonb_build_object('id',id,'label',label,'address_line1',address_line1,'address_line2',address_line2,'city',city,'state',state,'postal_code',postal_code,'latitude',latitude,'longitude',longitude) FROM users.customer_addresses WHERE id=$1 AND customer_id=$2 AND deleted_at IS NULL`, addressID, customerID).Scan(&address)
     if err != nil {
@@ -225,8 +250,8 @@ func (s *Service) Checkout(ctx context.Context, customerID, addressID, idempoten
     }
     var totalLines, availableLines int
     var restaurantEligible bool
-    if err = tx.QueryRow(ctx, `SELECT is_active AND approval_status='APPROVED' AND deleted_at IS NULL FROM public.merchants WHERE id=$1 FOR SHARE`, merchantID).Scan(&restaurantEligible); err != nil || !restaurantEligible {
-        return nil, errors.New("restaurant is closed or not approved")
+    if err = tx.QueryRow(ctx, `SELECT station_id=$2 AND COALESCE(public.station_covers(station_id,latitude,longitude),false) AND is_active AND approval_status='APPROVED' AND deleted_at IS NULL FROM public.merchants WHERE id=$1 FOR SHARE`, merchantID, stationID).Scan(&restaurantEligible); err != nil || !restaurantEligible {
+        return nil, errors.New("restaurant is closed, unapproved, or does not deliver to the selected address")
     }
     if err = tx.QueryRow(ctx, `SELECT COUNT(*) FROM orders.cart_items WHERE cart_id=$1`, cartID).Scan(&totalLines); err != nil {
         return nil, err
@@ -262,7 +287,7 @@ func (s *Service) Checkout(ctx context.Context, customerID, addressID, idempoten
         return nil, errors.New("cart is empty or items unavailable")
     }
     var orderID string
-    err = tx.QueryRow(ctx, `INSERT INTO public.orders(merchant_id,customer_id,status,total_price,idempotency_key,delivery_address) VALUES($1,$2,'CREATED',$3::numeric/100,$4,$5::jsonb) RETURNING id`, merchantID, customerID, subtotal, idempotencyKey, string(address)).Scan(&orderID)
+    err = tx.QueryRow(ctx, `INSERT INTO public.orders(merchant_id,customer_id,status,total_price,idempotency_key,delivery_address,station_id) VALUES($1,$2,'CREATED',$3::numeric/100,$4,$5::jsonb,$6) RETURNING id`, merchantID, customerID, subtotal, idempotencyKey, string(address), stationID).Scan(&orderID)
     if err != nil {
         return nil, err
     }
@@ -288,7 +313,64 @@ func (s *Service) AddAddress(ctx context.Context, customerID, label, line1, line
     if line1 == "" || city == "" || state == "" || postal == "" {
         return "", errors.New("address_line1, city, state, and postal_code are required")
     }
+    if lat != nil || lon != nil {
+        if err := stations.Coordinates(lat, lon); err != nil {
+            return "", err
+        }
+    }
     var id string
     err := s.db.QueryRow(ctx, `INSERT INTO users.customer_addresses(customer_id,label,address_line1,address_line2,city,state,postal_code,latitude,longitude) VALUES($1,$2,$3,NULLIF($4,''),$5,$6,$7,$8,$9) RETURNING id`, customerID, label, line1, line2, city, state, postal, lat, lon).Scan(&id)
     return id, err
+}
+
+// SelectAddress re-resolves coverage and removes incompatible cart items atomically.
+func (s *Service) SelectAddress(ctx context.Context, customer, address string) (string, bool, error) {
+    tx, err := s.db.Begin(ctx)
+    if err != nil {
+        return "", false, err
+    }
+    defer tx.Rollback(ctx)
+    if err = stations.LockCoverage(ctx, tx); err != nil {
+        return "", false, err
+    }
+    var locked string
+    if err = tx.QueryRow(ctx, `SELECT id FROM public.users WHERE id=$1 FOR UPDATE`, customer).Scan(&locked); err != nil {
+        return "", false, err
+    }
+    var owned bool
+    if err = tx.QueryRow(ctx, `SELECT EXISTS(SELECT 1 FROM users.customer_addresses WHERE id=$1 AND customer_id=$2 AND deleted_at IS NULL)`, address, customer).Scan(&owned); err != nil {
+        return "", false, err
+    }
+    if !owned {
+        return "", false, errors.New("delivery address not found")
+    }
+    station, coverageErr := stations.OwnedAddress(ctx, tx, customer, address)
+    var cart, merchant string
+    err = tx.QueryRow(ctx, `SELECT id,merchant_id FROM orders.carts WHERE customer_id=$1 AND status='ACTIVE' FOR UPDATE`, customer).Scan(&cart, &merchant)
+    cleared := false
+    if err != nil && err != pgx.ErrNoRows {
+        return "", false, err
+    }
+    if err == nil {
+        valid := false
+        if coverageErr == nil {
+            if err = tx.QueryRow(ctx, `SELECT station_id=$2 AND COALESCE(public.station_covers(station_id,latitude,longitude),false) FROM public.merchants WHERE id=$1 FOR SHARE`, merchant, station).Scan(&valid); err != nil {
+                return "", false, err
+            }
+        }
+        if !valid {
+            if _, err = tx.Exec(ctx, `DELETE FROM orders.carts WHERE id=$1`, cart); err != nil {
+                return "", false, err
+            }
+            cleared = true
+        } else {
+            if _, err = tx.Exec(ctx, `UPDATE orders.carts SET delivery_address_id=$2 WHERE id=$1`, cart, address); err != nil {
+                return "", false, err
+            }
+        }
+    }
+    if err = tx.Commit(ctx); err != nil {
+        return "", false, err
+    }
+    return station, cleared, coverageErr
 }

@@ -25,6 +25,7 @@ import (
 func TestCustomerToRestaurantToDeliveryAndRatings(t *testing.T) {
     t.Setenv("CUSTOMER_PAYMENT_METHOD", "CASH_ON_DELIVERY")
     pool := testdb.New(t)
+    testdb.Station(t, pool)
     ctx := context.Background()
     log := zap.NewNop()
     cfg := &config.Config{JWTSecret: "isolated-full-workflow-secret-32-characters"}
@@ -40,7 +41,7 @@ func TestCustomerToRestaurantToDeliveryAndRatings(t *testing.T) {
     if _, err := pool.Exec(ctx, `INSERT INTO public.customers(id,name,email) VALUES($1,'Customer','customer@test.invalid')`, customerID); err != nil {
         t.Fatal(err)
     }
-    if err := pool.QueryRow(ctx, `INSERT INTO public.merchants(name,email,owner_id,is_active,approval_status,fee_payment_status) VALUES('Kitchen','kitchen@test.invalid',$1,true,'APPROVED','PAID') RETURNING id`, owner).Scan(&merchant); err != nil {
+    if err := pool.QueryRow(ctx, `INSERT INTO public.merchants(name,email,owner_id,is_active,approval_status,fee_payment_status,latitude,longitude) VALUES('Kitchen','kitchen@test.invalid',$1,true,'APPROVED','PAID',34,74) RETURNING id`, owner).Scan(&merchant); err != nil {
         t.Fatal(err)
     }
     if err := pool.QueryRow(ctx, `INSERT INTO catalog.categories(merchant_id,name) VALUES($1,'Meals') RETURNING id`, merchant).Scan(&category); err != nil {
@@ -49,17 +50,18 @@ func TestCustomerToRestaurantToDeliveryAndRatings(t *testing.T) {
     if err := pool.QueryRow(ctx, `INSERT INTO catalog.items(merchant_id,category_id,name,base_price) VALUES($1,$2,'Lunch',25000) RETURNING id`, merchant, category).Scan(&item); err != nil {
         t.Fatal(err)
     }
-    if err := pool.QueryRow(ctx, `INSERT INTO delivery.delivery_partners(user_id,name,phone,approval_status,status) VALUES($1,'Partner','1234567890','APPROVED','ONLINE') RETURNING id`, partnerUser).Scan(&partner); err != nil {
+    if err := pool.QueryRow(ctx, `INSERT INTO delivery.delivery_partners(user_id,name,phone,approval_status,status,station_id) VALUES($1,'Partner','1234567890','APPROVED','OFFLINE','20000000-0000-4000-a000-000000000001') RETURNING id`, partnerUser).Scan(&partner); err != nil {
         t.Fatal(err)
     }
     if _, err := pool.Exec(ctx, `INSERT INTO delivery.vehicles(partner_id,vehicle_type,registration_number) VALUES($1,'BIKE','TEST')`, partner); err != nil {
         t.Fatal(err)
     }
-    if err := pool.QueryRow(ctx, `INSERT INTO users.customer_addresses(customer_id,label,address_line1,city,state,postal_code) VALUES($1,'Home','Test Street','Test City','Test State','123456') RETURNING id`, customerID).Scan(&address); err != nil {
+    if err := pool.QueryRow(ctx, `INSERT INTO users.customer_addresses(customer_id,label,address_line1,city,state,postal_code,latitude,longitude) VALUES($1,'Home','Test Street','Test City','Test State','123456',34,74) RETURNING id`, customerID).Scan(&address); err != nil {
         t.Fatal(err)
     }
+    testdb.PartnerLocation(t, pool, partner)
     service := checkout.New(pool)
-    if err := service.Add(ctx, customerID, item, 2); err != nil {
+    if err := service.Add(ctx, customerID, item, 2, address); err != nil {
         t.Fatal(err)
     }
     order, err := service.Checkout(ctx, customerID, address, "isolated-idempotency-key")

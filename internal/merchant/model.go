@@ -3,6 +3,9 @@ package merchant
 import "time"
 
 type Merchant struct {
+	Latitude         *float64  `json:"latitude"`
+	Longitude        *float64  `json:"longitude"`
+	StationID        string    `json:"station_id"`
 	ID               string    `json:"id"`
 	Name             string    `json:"name"`
 	Email            string    `json:"email"`

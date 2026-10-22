@@ -4,6 +4,7 @@ import (
     "context"
     "fmt"
     "github.com/imtiyazkumar/yember-core/internal/dispatch"
+    "github.com/imtiyazkumar/yember-core/internal/stations"
     "math"
 
     "github.com/jackc/pgx/v5/pgxpool"
@@ -34,7 +35,7 @@ func NewPostgresRepo(db *pgxpool.Pool, log *zap.Logger) Repository {
 func (r *pgRepo) GetRiderByUserID(ctx context.Context, userID string) (*RiderProfile, error) {
     query := `
         SELECT dp.id, dp.user_id, dp.name, dp.phone, dp.status, dp.approval_status,
-               COALESCE(v.vehicle_type, ''), COALESCE(v.registration_number, ''), dp.created_at, dp.eligibility_expires_at
+               COALESCE(v.vehicle_type, ''), COALESCE(v.registration_number, ''), dp.created_at, dp.eligibility_expires_at,dp.station_id
         FROM delivery.delivery_partners dp
         LEFT JOIN LATERAL(SELECT vehicle_type,registration_number FROM delivery.vehicles WHERE partner_id=dp.id ORDER BY id LIMIT 1) v ON true
         WHERE dp.user_id = $1 AND dp.deleted_at IS NULL
@@ -42,7 +43,7 @@ func (r *pgRepo) GetRiderByUserID(ctx context.Context, userID string) (*RiderPro
     var p RiderProfile
     err := r.db.QueryRow(ctx, query, userID).Scan(
         &p.ID, &p.UserID, &p.Name, &p.Phone, &p.Status, &p.ApprovalStatus,
-        &p.VehicleType, &p.RegNumber, &p.CreatedAt, &p.EligibilityExpiresAt,
+        &p.VehicleType, &p.RegNumber, &p.CreatedAt, &p.EligibilityExpiresAt, &p.StationID,
     )
     if err != nil {
         return nil, err
@@ -59,6 +60,18 @@ func (r *pgRepo) UpdateStatus(ctx context.Context, partnerID, status string) err
         return err
     }
     defer tx.Rollback(ctx)
+    if err = stations.LockCoverage(ctx, tx); err != nil {
+        return err
+    }
+    if status == "ONLINE" {
+        var locked string
+        if err = tx.QueryRow(ctx, `SELECT id FROM delivery.delivery_partners WHERE id=$1 FOR UPDATE`, partnerID).Scan(&locked); err != nil {
+            return err
+        }
+        if err = stations.ValidatePartner(ctx, tx, partnerID); err != nil {
+            return err
+        }
+    }
     tag, err := tx.Exec(ctx, `UPDATE delivery.delivery_partners p SET status=$1,updated_at=now() WHERE id=$2 AND deleted_at IS NULL AND ($1='OFFLINE' OR (approval_status='APPROVED' AND (eligibility_expires_at IS NULL OR eligibility_expires_at>now()) AND EXISTS(SELECT 1 FROM delivery.vehicles WHERE partner_id=p.id AND is_active)))`, status, partnerID)
     if err != nil {
         return err
@@ -78,6 +91,7 @@ func (r *pgRepo) RecordLocation(ctx context.Context, partnerID string, lat, lng 
     if math.IsNaN(lat) || math.IsNaN(lng) || math.IsInf(lat, 0) || math.IsInf(lng, 0) || lat < -90 || lat > 90 || lng < -180 || lng > 180 {
         return fmt.Errorf("valid latitude and longitude required")
     }
+    // Legacy callers cannot establish a verified location for availability.
     query := `INSERT INTO delivery.live_locations (partner_id, latitude, longitude) VALUES ($1, $2, $3)`
     _, err := r.db.Exec(ctx, query, partnerID, lat, lng)
     return err
@@ -92,7 +106,7 @@ func (r *pgRepo) ListAvailableJobs(ctx context.Context) ([]*DeliveryJob, error) 
         JOIN public.merchants m ON o.merchant_id = m.id
         LEFT JOIN LATERAL(SELECT address FROM merchants.merchant_branches WHERE merchant_id=m.id AND deleted_at IS NULL ORDER BY created_at,id LIMIT 1) mb ON true
         JOIN public.customers c ON o.customer_id = c.id
-        WHERE EXISTS(SELECT 1 FROM delivery.offers f WHERE f.order_id=o.id AND f.partner_id=$1 AND f.status='PENDING' AND f.expires_at>now())
+        WHERE EXISTS(SELECT 1 FROM delivery.delivery_partners p WHERE p.id=$1 AND p.status='ONLINE' AND public.partner_in_station(p.id)) AND EXISTS(SELECT 1 FROM delivery.offers f WHERE f.order_id=o.id AND f.partner_id=$1 AND f.status='PENDING' AND f.expires_at>now())
         ORDER BY o.created_at ASC
     `
     rows, err := r.db.Query(ctx, query, ctx.Value(partnerContextKey{}))
@@ -101,7 +115,7 @@ func (r *pgRepo) ListAvailableJobs(ctx context.Context) ([]*DeliveryJob, error) 
     }
     defer rows.Close()
 
-    var jobs []*DeliveryJob
+    jobs := []*DeliveryJob{}
     for rows.Next() {
         var j DeliveryJob
         var addr string
@@ -221,4 +235,8 @@ func (r *pgRepo) GetEarningsSummary(ctx context.Context, partnerID string) (*Rid
         return nil, err
     }
     return &s, nil
+}
+
+func (r *pgRepo) RecordVerifiedLocation(ctx context.Context, id string, l stations.Location) error {
+    return stations.RecordLocation(ctx, r.db, id, l)
 }

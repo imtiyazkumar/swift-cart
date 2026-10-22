@@ -7,6 +7,19 @@ import (
 )
 
 func RegisterRoutes(g *echo.Group, svc *Service) {
+    g.PUT("/cart/delivery-address", func(c echo.Context) error {
+        var req struct {
+            AddressID string `json:"address_id"`
+        }
+        if c.Bind(&req) != nil || req.AddressID == "" {
+            return echo.NewHTTPError(400, "delivery address required")
+        }
+        station, cleared, err := svc.SelectAddress(c.Request().Context(), c.Get("userID").(string), req.AddressID)
+        if err != nil {
+            return echo.NewHTTPError(400, err.Error())
+        }
+        return c.JSON(200, map[string]any{"station_id": station, "cart_cleared": cleared})
+    })
     g.GET("/orders/:id", func(c echo.Context) error {
         detail, err := svc.Detail(c.Request().Context(), c.Get("userID").(string), c.Param("id"))
         if err != nil {
@@ -32,14 +45,15 @@ func RegisterRoutes(g *echo.Group, svc *Service) {
     })
     g.POST("/cart/items", func(c echo.Context) error {
         var req struct {
-            ItemID   string `json:"item_id"`
-            Quantity int    `json:"quantity"`
+            AddressID string `json:"address_id"`
+            ItemID    string `json:"item_id"`
+            Quantity  int    `json:"quantity"`
         }
         if err := c.Bind(&req); err != nil {
             return echo.NewHTTPError(http.StatusBadRequest, "invalid request body")
         }
         uid, _ := c.Get("userID").(string)
-        if err := svc.Add(c.Request().Context(), uid, req.ItemID, req.Quantity); err != nil {
+        if err := svc.Add(c.Request().Context(), uid, req.ItemID, req.Quantity, req.AddressID); err != nil {
             return echo.NewHTTPError(http.StatusBadRequest, err.Error())
         }
         cart, err := svc.Get(c.Request().Context(), uid)

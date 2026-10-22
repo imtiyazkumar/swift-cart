@@ -2,7 +2,9 @@ package customer
 
 import (
     "context"
+    "errors"
     "fmt"
+    "github.com/imtiyazkumar/yember-core/internal/stations"
     "github.com/jackc/pgx/v5/pgxpool"
     "go.uber.org/zap"
 )
@@ -121,33 +123,23 @@ func (r *pgRepo) AddAddress(ctx context.Context, customerID, label, addressLine1
 }
 
 func (r *pgRepo) ListAddresses(ctx context.Context, customerID string) ([]map[string]string, error) {
-    query := `SELECT id, label, address_line1, city, state, postal_code FROM users.customer_addresses WHERE customer_id=$1 AND deleted_at IS NULL ORDER BY created_at DESC`
+    query := `SELECT id, label, address_line1, city, state, postal_code,COALESCE(latitude::text,''),COALESCE(longitude::text,'') FROM users.customer_addresses WHERE customer_id=$1 AND deleted_at IS NULL ORDER BY created_at DESC`
     rows, err := r.db.Query(ctx, query, customerID)
     if err != nil {
         return nil, err
     }
     defer rows.Close()
 
-    var list []map[string]string
+    list := []map[string]string{}
     for rows.Next() {
-        var id, label, line1, city, state, postalCode string
-        if err := rows.Scan(&id, &label, &line1, &city, &state, &postalCode); err == nil {
+        var id, label, line1, city, state, postalCode, lat, lon string
+        if err := rows.Scan(&id, &label, &line1, &city, &state, &postalCode, &lat, &lon); err == nil {
             detail := fmt.Sprintf("%s, %s, %s %s", line1, city, state, postalCode)
             list = append(list, map[string]string{
-                "id":     id,
-                "name":   label,
-                "detail": detail,
-            })
-        }
-    }
-    if len(list) == 0 {
-        var custAddr string
-        _ = r.db.QueryRow(ctx, `SELECT COALESCE(address, '') FROM public.customers WHERE id=$1`, customerID).Scan(&custAddr)
-        if custAddr != "" {
-            list = append(list, map[string]string{
-                "id":     "primary",
-                "name":   "Home",
-                "detail": custAddr,
+                "id":       id,
+                "name":     label,
+                "detail":   detail,
+                "latitude": lat, "longitude": lon,
             })
         }
     }
@@ -161,19 +153,23 @@ func (r *pgRepo) DeleteCustomer(ctx context.Context, id string) error {
 }
 
 func (r *pgRepo) ListRestaurants(ctx context.Context, city, search string) ([]*Restaurant, error) {
+    station := stations.ContextStation(ctx)
+    if station == "" {
+        return nil, errors.New("select a covered delivery address")
+    }
     query := `
         SELECT m.id, m.name, COALESCE(array_to_string(m.tags, ', '), '') as cuisine,
                COALESCE((SELECT round(avg(rating),1)::text FROM merchants.restaurant_reviews WHERE merchant_id=m.id AND hidden_at IS NULL),'') as rating, (SELECT count(*)::text FROM merchants.restaurant_reviews WHERE merchant_id=m.id AND hidden_at IS NULL) as reviews, '' as time, '' as distance,
                '' as fee, '' as offer, '' as image, '' as accent
         FROM public.merchants m
-        WHERE m.is_active = true AND m.approval_status='APPROVED' AND m.fee_payment_status='PAID' AND m.deleted_at IS NULL
+        WHERE m.station_id=$2 AND public.station_covers(m.station_id,m.latitude,m.longitude) AND m.is_active = true AND m.approval_status='APPROVED' AND m.fee_payment_status='PAID' AND m.deleted_at IS NULL
     `
     query += ` AND ($1 = '' OR m.name ILIKE '%' || $1 || '%' OR EXISTS (
         SELECT 1 FROM catalog.items i
         WHERE i.merchant_id = m.id AND i.is_available = true AND i.deleted_at IS NULL
         AND i.name ILIKE '%' || $1 || '%'
     ))`
-    rows, err := r.db.Query(ctx, query, search)
+    rows, err := r.db.Query(ctx, query, search, station)
     if err != nil {
         return nil, err
     }
@@ -203,15 +199,19 @@ func (r *pgRepo) ListRestaurants(ctx context.Context, city, search string) ([]*R
 }
 
 func (r *pgRepo) GetRestaurantByID(ctx context.Context, id string) (*Restaurant, error) {
+    station := stations.ContextStation(ctx)
+    if station == "" {
+        return nil, errors.New("select a covered delivery address")
+    }
     query := `
         SELECT m.id, m.name, COALESCE(array_to_string(m.tags, ', '), '') as cuisine,
                COALESCE((SELECT round(avg(rating),1)::text FROM merchants.restaurant_reviews WHERE merchant_id=m.id AND hidden_at IS NULL),'') as rating, (SELECT count(*)::text FROM merchants.restaurant_reviews WHERE merchant_id=m.id AND hidden_at IS NULL) as reviews, '' as time, '' as distance,
                '' as fee, '' as offer, '' as image, '' as accent
         FROM public.merchants m
-        WHERE m.id = $1 AND m.is_active = true AND m.approval_status='APPROVED' AND m.fee_payment_status='PAID' AND m.deleted_at IS NULL
+        WHERE m.id = $1 AND m.station_id=$2 AND public.station_covers(m.station_id,m.latitude,m.longitude) AND m.is_active = true AND m.approval_status='APPROVED' AND m.fee_payment_status='PAID' AND m.deleted_at IS NULL
     `
     var rest Restaurant
-    err := r.db.QueryRow(ctx, query, id).Scan(
+    err := r.db.QueryRow(ctx, query, id, station).Scan(
         &rest.ID, &rest.Name, &rest.Cuisine, &rest.Rating, &rest.Reviews,
         &rest.Time, &rest.Distance, &rest.Fee, &rest.Offer, &rest.Image, &rest.Accent,
     )

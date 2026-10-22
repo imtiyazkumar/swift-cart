@@ -74,6 +74,19 @@ func Seed(ctx context.Context, pool *pgxpool.Pool, password string) error {
             return fmt.Errorf("local fixture %d: %w", i+1, err)
         }
     }
+    var allOrdersExist bool
+    if err = tx.QueryRow(ctx, `SELECT count(*)=10 FROM public.orders WHERE id::text IN (SELECT '10000000-0000-4000-a000-'||lpad(n::text,12,'0') FROM generate_series(100,109) n)`).Scan(&allOrdersExist); err != nil { return err }
+    if allOrdersExist { return tx.Commit(ctx) }
+    var originalStatus string
+    if err = tx.QueryRow(ctx, `SELECT status FROM delivery.delivery_partners WHERE id=$1`, PartnerID).Scan(&originalStatus); err != nil {
+        return err
+    }
+    if _, err = tx.Exec(ctx, `INSERT INTO delivery.live_locations(partner_id,latitude,longitude,accuracy_m,observed_at,permission_granted) VALUES($1,34,74,5,now(),true)`, PartnerID); err != nil {
+        return err
+    }
+    if _, err = tx.Exec(ctx, `UPDATE delivery.delivery_partners SET status='ONLINE' WHERE id=$1`, PartnerID); err != nil {
+        return err
+    }
     for i := 0; i < 10; i++ {
         id := fmt.Sprintf("10000000-0000-4000-a000-%012d", 100+i)
         status := "DELIVERED"
@@ -86,7 +99,7 @@ func Seed(ctx context.Context, pool *pgxpool.Pool, password string) error {
         if i == 9 {
             status = "CREATED"
         }
-        tag, err := tx.Exec(ctx, `INSERT INTO public.orders(id,merchant_id,customer_id,status,total_price,currency,created_at,delivery_address) VALUES($1,$2,$3,$4,250,'INR',now()-make_interval(days=>$5),'{"address_line1":"12 Local Test Street","city":"Srinagar","state":"Jammu and Kashmir","postal_code":"190001"}') ON CONFLICT(id) DO NOTHING`, id, RestaurantID, CustomerID, status, 6-i%7)
+        tag, err := tx.Exec(ctx, `INSERT INTO public.orders(id,merchant_id,customer_id,status,total_price,currency,created_at,delivery_address) VALUES($1,$2,$3,$4,250,'INR',now()-make_interval(days=>$5),'{"address_line1":"12 Local Test Street","city":"Srinagar","state":"Jammu and Kashmir","postal_code":"190001","latitude":34,"longitude":74}') ON CONFLICT(id) DO NOTHING`, id, RestaurantID, CustomerID, status, 6-i%7)
         if err != nil {
             return fmt.Errorf("local order: %w", err)
         }
@@ -118,6 +131,9 @@ func Seed(ctx context.Context, pool *pgxpool.Pool, password string) error {
         return err
     }
     if _, err = tx.Exec(ctx, `INSERT INTO public.admin_audit_logs(id,admin_id,action,target_type,details) VALUES('10000000-0000-4000-a000-000000000070',$1,'LOCAL_FIXTURES_CREATED','development','{"reason":"Explicit local development setup"}') ON CONFLICT(id) DO NOTHING`, AdminID); err != nil {
+        return err
+    }
+    if _, err = tx.Exec(ctx, `UPDATE delivery.delivery_partners SET status=$2 WHERE id=$1`, PartnerID, originalStatus); err != nil {
         return err
     }
     return tx.Commit(ctx)

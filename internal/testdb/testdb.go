@@ -15,6 +15,24 @@ import (
     "github.com/joho/godotenv"
 )
 
+// Station explicitly installs coverage for tests that exercise operational flows.
+func Station(t *testing.T, pool *pgxpool.Pool) {
+    t.Helper()
+    if _, err := pool.Exec(context.Background(), `INSERT INTO public.stations(id,name,latitude,longitude,radius_m) VALUES('20000000-0000-4000-a000-000000000001','Test station',34,74,5000) ON CONFLICT DO NOTHING`); err != nil {
+        t.Fatal(err)
+    }
+}
+
+func PartnerLocation(t *testing.T, pool *pgxpool.Pool, id string) {
+    t.Helper()
+    if _, err := pool.Exec(context.Background(), `INSERT INTO delivery.live_locations(partner_id,latitude,longitude,accuracy_m,observed_at,permission_granted) VALUES($1,34,74,5,now(),true)`, id); err != nil {
+        t.Fatal(err)
+    }
+    if _, err := pool.Exec(context.Background(), `UPDATE delivery.delivery_partners SET status='ONLINE' WHERE id=$1`, id); err != nil {
+        t.Fatal(err)
+    }
+}
+
 func New(t *testing.T) *pgxpool.Pool {
     t.Helper()
     if os.Getenv("YEMBER_INTEGRATION") != "1" {

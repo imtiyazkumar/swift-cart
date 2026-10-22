@@ -4,6 +4,7 @@ import (
     "context"
     "encoding/json"
     "errors"
+    "github.com/imtiyazkumar/yember-core/internal/stations"
     "strings"
     "time"
 
@@ -79,6 +80,9 @@ func (r *pgRepo) Decide(ctx context.Context, actor, kind, id string, d Decision)
         return err
     }
     defer tx.Rollback(ctx)
+    if err = stations.LockCoverage(ctx, tx); err != nil {
+        return err
+    }
     var authorized bool
     if err = tx.QueryRow(ctx, `SELECT EXISTS(SELECT 1 FROM public.users WHERE id=$1 AND role='ADMIN' AND disabled_at IS NULL AND deleted_at IS NULL)`, actor).Scan(&authorized); err != nil {
         return err
@@ -231,6 +235,9 @@ func (r *pgRepo) Suspend(ctx context.Context, actor, kind, id string, suspended 
         return err
     }
     defer tx.Rollback(ctx)
+    if err = stations.LockCoverage(ctx, tx); err != nil {
+        return err
+    }
     desired, expected := "SUSPENDED", "APPROVED"
     if !suspended {
         desired, expected = "APPROVED", "SUSPENDED"

@@ -3,6 +3,7 @@ package restaurant
 import "time"
 
 type RestaurantProfile struct {
+    StationID        *string   `json:"station_id"`
     ID               string    `json:"id"`
     OwnerID          string    `json:"owner_id"`
     Name             string    `json:"name"`

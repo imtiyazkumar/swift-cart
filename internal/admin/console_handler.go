@@ -69,7 +69,7 @@ func registerConsole(g *echo.Group, svc *Service, cfg *config.Config) {
     group.GET("/:resource", func(c echo.Context) error {
         page, _ := strconv.Atoi(c.QueryParam("page"))
         limit, _ := strconv.Atoi(c.QueryParam("limit"))
-        result, err := repo.ConsoleList(c.Request().Context(), c.Param("resource"), ListFilter{Search: c.QueryParam("q"), Status: c.QueryParam("status"), Role: c.QueryParam("role"), Page: page, Limit: limit})
+        result, err := repo.ConsoleList(c.Request().Context(), c.Param("resource"), ListFilter{StationID: c.QueryParam("station_id"), Search: c.QueryParam("q"), Status: c.QueryParam("status"), Role: c.QueryParam("role"), Page: page, Limit: limit})
         if err != nil {
             return echo.NewHTTPError(500, "could not load records")
         }

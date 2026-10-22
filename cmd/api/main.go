@@ -32,6 +32,7 @@ import (
     "github.com/imtiyazkumar/yember-core/internal/payments"
     "github.com/imtiyazkumar/yember-core/internal/restaurant"
     "github.com/imtiyazkumar/yember-core/internal/rider"
+    "github.com/imtiyazkumar/yember-core/internal/stations"
     "github.com/imtiyazkumar/yember-core/pkg/db"
     "github.com/imtiyazkumar/yember-core/pkg/events"
     "github.com/imtiyazkumar/yember-core/pkg/logger"
@@ -88,6 +89,7 @@ func main() {
 
     // Register Auth routes
     auth.RegisterRoutes(e, cfg, logg, pg.Pool)
+    stations.Register(api, pg.Pool, cfg, logg)
     onboarding.Register(api, pg.Pool, cfg, logg)
     partnerops.Register(api, pg.Pool, cfg, logg)
     fees.Register(api, pg.Pool, cfg, logg)

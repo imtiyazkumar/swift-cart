@@ -3,6 +3,7 @@ package dispatch
 import (
     "context"
     "errors"
+    "github.com/imtiyazkumar/yember-core/internal/stations"
     "time"
 
     "github.com/jackc/pgx/v5"
@@ -17,8 +18,16 @@ func Tick(ctx context.Context, pool *pgxpool.Pool) error {
         return err
     }
     defer tx.Rollback(ctx)
+    if err = stations.LockCoverage(ctx, tx); err != nil {
+        return err
+    }
+    if err = stations.ExpireUnavailable(ctx, tx); err != nil {
+        return err
+    }
     var maxAttempts int
-    if err=tx.QueryRow(ctx,`SELECT COALESCE((SELECT (value->>'max_attempts')::int FROM public.platform_settings WHERE key='dispatch_policy'),0)`).Scan(&maxAttempts);err!=nil{return err}
+    if err = tx.QueryRow(ctx, `SELECT COALESCE((SELECT (value->>'max_attempts')::int FROM public.platform_settings WHERE key='dispatch_policy'),0)`).Scan(&maxAttempts); err != nil {
+        return err
+    }
     var locked bool
     if err = tx.QueryRow(ctx, `SELECT pg_try_advisory_xact_lock(894211)`).Scan(&locked); err != nil || !locked {
         return err
@@ -26,7 +35,7 @@ func Tick(ctx context.Context, pool *pgxpool.Pool) error {
     if _, err = tx.Exec(ctx, `UPDATE delivery.offers SET status='EXPIRED',updated_at=now() WHERE status='PENDING' AND (expires_at<=now() OR NOT EXISTS(SELECT 1 FROM public.orders o WHERE o.id=order_id AND o.status IN ('ACCEPTED','PREPARING','READY_FOR_PICKUP')))`); err != nil {
         return err
     }
-    rows, err := tx.Query(ctx, `SELECT o.id FROM public.orders o WHERE o.status IN ('ACCEPTED','PREPARING','READY_FOR_PICKUP') AND ($1=0 OR (SELECT count(*) FROM delivery.offers f WHERE f.order_id=o.id)<$1) AND NOT EXISTS(SELECT 1 FROM delivery.delivery_assignments a WHERE a.order_id=o.id AND a.status IN ('ASSIGNED','PICKED_UP','OUT_FOR_DELIVERY','DELIVERED')) AND NOT EXISTS(SELECT 1 FROM delivery.offers f WHERE f.order_id=o.id AND f.status='PENDING') ORDER BY o.created_at LIMIT 50 FOR UPDATE OF o SKIP LOCKED`,maxAttempts)
+    rows, err := tx.Query(ctx, `SELECT o.id FROM public.orders o WHERE o.status IN ('ACCEPTED','PREPARING','READY_FOR_PICKUP') AND ($1=0 OR (SELECT count(*) FROM delivery.offers f WHERE f.order_id=o.id)<$1) AND NOT EXISTS(SELECT 1 FROM delivery.delivery_assignments a WHERE a.order_id=o.id AND a.status IN ('ASSIGNED','PICKED_UP','OUT_FOR_DELIVERY','DELIVERED')) AND NOT EXISTS(SELECT 1 FROM delivery.offers f WHERE f.order_id=o.id AND f.status='PENDING') ORDER BY o.created_at LIMIT 50 FOR UPDATE OF o SKIP LOCKED`, maxAttempts)
     if err != nil {
         return err
     }
@@ -45,7 +54,7 @@ func Tick(ctx context.Context, pool *pgxpool.Pool) error {
     }
     for _, id := range ids {
         var partner, userID string
-        err = tx.QueryRow(ctx, `SELECT p.id,p.user_id FROM delivery.delivery_partners p JOIN public.users u ON u.id=p.user_id WHERE p.status='ONLINE' AND p.approval_status='APPROVED' AND p.deleted_at IS NULL AND u.deleted_at IS NULL AND u.disabled_at IS NULL AND (p.eligibility_expires_at IS NULL OR p.eligibility_expires_at>now()) AND EXISTS(SELECT 1 FROM delivery.vehicles v WHERE v.partner_id=p.id AND v.is_active) AND NOT EXISTS(SELECT 1 FROM delivery.delivery_assignments a WHERE a.partner_id=p.id AND a.status IN ('ASSIGNED','PICKED_UP','OUT_FOR_DELIVERY')) AND NOT EXISTS(SELECT 1 FROM delivery.offers f WHERE f.partner_id=p.id AND f.status='PENDING') AND NOT EXISTS(SELECT 1 FROM delivery.offers f WHERE f.order_id=$1 AND f.partner_id=p.id) ORDER BY p.last_offered_at ASC NULLS FIRST,p.created_at,p.id LIMIT 1 FOR UPDATE OF p SKIP LOCKED`, id).Scan(&partner, &userID)
+        err = tx.QueryRow(ctx, `SELECT p.id,p.user_id FROM delivery.delivery_partners p JOIN public.users u ON u.id=p.user_id WHERE public.partner_in_station(p.id) AND p.station_id=(SELECT station_id FROM public.orders WHERE id=$1) AND p.status='ONLINE' AND p.approval_status='APPROVED' AND p.deleted_at IS NULL AND u.deleted_at IS NULL AND u.disabled_at IS NULL AND (p.eligibility_expires_at IS NULL OR p.eligibility_expires_at>now()) AND EXISTS(SELECT 1 FROM delivery.vehicles v WHERE v.partner_id=p.id AND v.is_active) AND NOT EXISTS(SELECT 1 FROM delivery.delivery_assignments a WHERE a.partner_id=p.id AND a.status IN ('ASSIGNED','PICKED_UP','OUT_FOR_DELIVERY')) AND NOT EXISTS(SELECT 1 FROM delivery.offers f WHERE f.partner_id=p.id AND f.status='PENDING') AND NOT EXISTS(SELECT 1 FROM delivery.offers f WHERE f.order_id=$1 AND f.partner_id=p.id) ORDER BY p.last_offered_at ASC NULLS FIRST,p.created_at,p.id LIMIT 1 FOR UPDATE OF p SKIP LOCKED`, id).Scan(&partner, &userID)
         if err == pgx.ErrNoRows {
             continue
         }
@@ -71,6 +80,9 @@ func Accept(ctx context.Context, pool *pgxpool.Pool, partner, order string) erro
         return err
     }
     defer tx.Rollback(ctx)
+    if err = stations.LockCoverage(ctx, tx); err != nil {
+        return err
+    }
     var status string
     if err = tx.QueryRow(ctx, `SELECT status FROM public.orders WHERE id=$1 FOR UPDATE`, order).Scan(&status); err != nil {
         return err
@@ -79,9 +91,9 @@ func Accept(ctx context.Context, pool *pgxpool.Pool, partner, order string) erro
         return errors.New("order is not eligible for delivery")
     }
     var eligible bool
-    err = tx.QueryRow(ctx, `SELECT p.status='ONLINE' AND p.approval_status='APPROVED' AND p.deleted_at IS NULL AND (p.eligibility_expires_at IS NULL OR p.eligibility_expires_at>now()) AND NOT EXISTS(SELECT 1 FROM delivery.delivery_assignments a WHERE a.partner_id=p.id AND a.status IN ('ASSIGNED','PICKED_UP','OUT_FOR_DELIVERY')) FROM delivery.delivery_partners p WHERE id=$1 FOR UPDATE`, partner).Scan(&eligible)
+    err = tx.QueryRow(ctx, `SELECT public.partner_in_station(p.id) AND p.station_id=(SELECT station_id FROM public.orders WHERE id=$2) AND p.status='ONLINE' AND p.approval_status='APPROVED' AND p.deleted_at IS NULL AND (p.eligibility_expires_at IS NULL OR p.eligibility_expires_at>now()) AND NOT EXISTS(SELECT 1 FROM delivery.delivery_assignments a WHERE a.partner_id=p.id AND a.status IN ('ASSIGNED','PICKED_UP','OUT_FOR_DELIVERY')) FROM delivery.delivery_partners p WHERE id=$1 FOR UPDATE`, partner, order).Scan(&eligible)
     if err != nil || !eligible {
-        return errors.New("partner is not eligible or already has a delivery")
+        return errors.New("partner is unavailable or already has a delivery; refresh GPS inside your assigned active station before accepting new work")
     }
     tag, err := tx.Exec(ctx, `UPDATE delivery.offers SET status='ACCEPTED',updated_at=now() WHERE order_id=$1 AND partner_id=$2 AND status='PENDING' AND expires_at>now()`, order, partner)
     if err != nil {

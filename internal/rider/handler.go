@@ -5,6 +5,7 @@ import (
     "net/http"
 
     "github.com/imtiyazkumar/yember-core/config"
+    "github.com/imtiyazkumar/yember-core/internal/stations"
     "github.com/labstack/echo/v4"
     "go.uber.org/zap"
 )
@@ -72,23 +73,25 @@ func RegisterRoutes(g *echo.Group, cfg *config.Config, logg *zap.Logger, svc *Se
             return echo.NewHTTPError(http.StatusBadRequest, "invalid request body")
         }
         if err := svc.UpdateStatus(c.Request().Context(), c.Get("partnerID").(string), req.Status); err != nil {
-            return echo.NewHTTPError(http.StatusInternalServerError, err.Error())
+            return echo.NewHTTPError(http.StatusConflict, err.Error())
         }
         return c.JSON(http.StatusOK, map[string]string{"status": req.Status})
     })
 
     // Update GPS Location
     g.POST("/location", func(c echo.Context) error {
-        var req struct {
-            PartnerID string  `json:"partner_id"`
-            Latitude  float64 `json:"latitude"`
-            Longitude float64 `json:"longitude"`
-        }
+        var req stations.Location
         if err := c.Bind(&req); err != nil {
-            return echo.NewHTTPError(http.StatusBadRequest, "invalid request body")
+            return echo.NewHTTPError(400, "invalid location")
         }
-        if err := svc.RecordLocation(c.Request().Context(), c.Get("partnerID").(string), req.Latitude, req.Longitude); err != nil {
-            return echo.NewHTTPError(http.StatusInternalServerError, err.Error())
+        repo, ok := svc.repo.(interface {
+            RecordVerifiedLocation(context.Context, string, stations.Location) error
+        })
+        if !ok {
+            return echo.NewHTTPError(503, "verified location service unavailable")
+        }
+        if err := repo.RecordVerifiedLocation(c.Request().Context(), c.Get("partnerID").(string), req); err != nil {
+            return echo.NewHTTPError(400, err.Error())
         }
         return c.JSON(http.StatusOK, map[string]string{"message": "location recorded"})
     })

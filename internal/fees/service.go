@@ -8,6 +8,7 @@ import (
     "encoding/json"
     "errors"
     "fmt"
+    "github.com/imtiyazkumar/yember-core/internal/stations"
     "io"
     "net/http"
     "net/url"
@@ -99,12 +100,18 @@ func (s *Service) CreateCheckout(ctx context.Context, owner string) (*Checkout, 
         return nil, err
     }
     defer tx.Rollback(ctx)
+    if err = stations.LockCoverage(ctx, tx); err != nil {
+        return nil, err
+    }
     var merchant, approval, email string
     if err = tx.QueryRow(ctx, `SELECT m.id,m.approval_status,u.email FROM public.merchants m JOIN public.users u ON u.id=m.owner_id WHERE m.owner_id=$1 AND m.deleted_at IS NULL ORDER BY m.created_at LIMIT 1 FOR UPDATE OF m`, owner).Scan(&merchant, &approval, &email); err != nil {
         return nil, errors.New("restaurant not found")
     }
     if approval != "APPROVED" {
         return nil, errors.New("restaurant approval required before payment")
+    }
+    if err = stations.ValidateRestaurant(ctx, tx, merchant); err != nil {
+        return nil, err
     }
     var existing Checkout
     err = tx.QueryRow(ctx, `SELECT checkout_url,status FROM payments.onboarding_payments WHERE merchant_id=$1`, merchant).Scan(&existing.URL, &existing.Status)
@@ -222,6 +229,9 @@ func (s *Service) ApplyEvent(ctx context.Context, body []byte) error {
         return err
     }
     defer tx.Rollback(ctx)
+    if err = stations.LockCoverage(ctx, tx); err != nil {
+        return err
+    }
     tag, err := tx.Exec(ctx, `INSERT INTO payments.onboarding_events(event_id) VALUES($1) ON CONFLICT DO NOTHING`, event.ID)
     if err != nil {
         return err
@@ -244,10 +254,10 @@ func (s *Service) ApplyEvent(ctx context.Context, body []byte) error {
     if _, err = tx.Exec(ctx, `UPDATE payments.onboarding_payments SET status='PAID',paid_at=now() WHERE merchant_id=$1`, merchant); err != nil {
         return err
     }
-    if _, err = tx.Exec(ctx, `UPDATE public.merchants SET fee_payment_status='PAID',onboarding_status='COMPLETED',is_active=(approval_status='APPROVED'),updated_at=now() WHERE id=$1`, merchant); err != nil {
+    if _, err = tx.Exec(ctx, `UPDATE public.merchants SET fee_payment_status='PAID',onboarding_status='COMPLETED',is_active=(approval_status='APPROVED' AND COALESCE(public.station_covers(station_id,latitude,longitude),false)),updated_at=now() WHERE id=$1`, merchant); err != nil {
         return err
     }
-    if _, err = tx.Exec(ctx, `INSERT INTO notifications.email_outbox(recipient,subject,body) SELECT email,'Yember onboarding payment confirmed','Your onboarding payment has been verified. Approved restaurants can now operate.' FROM public.merchants WHERE id=$1`, merchant); err != nil {
+    if _, err = tx.Exec(ctx, `INSERT INTO notifications.email_outbox(recipient,subject,body) SELECT email,'Yember onboarding payment confirmed','Your onboarding payment has been verified. Opening also requires approval and valid active station coverage.' FROM public.merchants WHERE id=$1`, merchant); err != nil {
         return err
     }
     return tx.Commit(ctx)

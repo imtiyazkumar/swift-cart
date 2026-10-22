@@ -5,12 +5,14 @@ import (
     "encoding/json"
     "errors"
     "fmt"
+    "github.com/imtiyazkumar/yember-core/internal/stations"
     "strings"
 
     "github.com/jackc/pgx/v5"
 )
 
 type ListFilter struct {
+    StationID string
     Search string
     Status string
     Role   string
@@ -27,14 +29,14 @@ type Page struct {
 // These projections are deliberately explicit: admin endpoints never serialize
 // database users (which include password hashes) or provider credentials.
 var consoleViews = map[string]string{
-    "support":     `SELECT t.id,t.subject AS name,t.user_id,t.order_id,t.category,t.status,t.created_at,t.updated_at,COALESCE(u.email,'') AS email,COALESCE(u.full_name,'') AS partner,concat_ws(' ',t.subject,t.id::text,u.email,t.category) AS search FROM public.partner_support_tickets t JOIN public.users u ON u.id=t.user_id`,
+    "support":     `SELECT t.station_id,(SELECT name FROM public.stations WHERE id=t.station_id) AS station_name,t.id,t.subject AS name,t.user_id,t.order_id,t.category,t.status,t.created_at,t.updated_at,COALESCE(u.email,'') AS email,COALESCE(u.full_name,'') AS partner,concat_ws(' ',t.subject,t.id::text,u.email,t.category) AS search FROM public.partner_support_tickets t JOIN public.users u ON u.id=t.user_id`,
     "customers":   `SELECT u.id,COALESCE(NULLIF(u.full_name,''),u.email,u.phone,'Customer') AS name,COALESCE(u.email,'') AS email,COALESCE(u.phone,'') AS phone,u.role,CASE WHEN u.disabled_at IS NULL THEN 'ACTIVE' ELSE 'DISABLED' END AS status,u.email_verified_at,u.created_at,(SELECT count(*) FROM public.orders o WHERE o.customer_id IN(SELECT c.id FROM public.customers c WHERE c.id=u.id OR c.user_id=u.id)) AS order_count,COALESCE((SELECT sum(o.total_amount) FROM public.orders o WHERE o.status='DELIVERED' AND o.customer_id IN(SELECT c.id FROM public.customers c WHERE c.id=u.id OR c.user_id=u.id)),0) AS delivered_value,concat_ws(' ',u.full_name,u.email,u.phone,u.id::text) AS search FROM public.users u WHERE u.deleted_at IS NULL AND u.role='CUSTOMER'`,
     "users":       `SELECT u.id,COALESCE(NULLIF(u.full_name,''),u.email,u.phone,'User') AS name,COALESCE(u.email,'') AS email,COALESCE(u.phone,'') AS phone,u.role,CASE WHEN u.disabled_at IS NULL THEN 'ACTIVE' ELSE 'DISABLED' END AS status,u.email_verified_at,u.created_at,concat_ws(' ',u.full_name,u.email,u.phone,u.id::text) AS search FROM public.users u WHERE u.deleted_at IS NULL`,
-    "restaurants": `SELECT m.id,m.name,m.description,COALESCE(m.phone,'') AS phone,COALESCE(u.email,m.email,'') AS email,m.owner_id,m.approval_status AS status,m.fee_payment_status,m.is_active,m.tags,m.rejection_reason,m.created_at,COALESCE((SELECT address FROM merchants.merchant_branches b WHERE b.merchant_id=m.id AND b.deleted_at IS NULL ORDER BY b.created_at,b.id LIMIT 1),'') AS address,(SELECT count(*) FROM public.orders o WHERE o.merchant_id=m.id) AS order_count,concat_ws(' ',m.name,m.email,u.email,m.id::text) AS search FROM public.merchants m LEFT JOIN public.users u ON u.id=m.owner_id WHERE m.deleted_at IS NULL`,
-    "partners":    `SELECT p.id,p.name,p.phone,COALESCE(u.email,'') AS email,p.user_id,p.approval_status AS status,p.status AS availability,p.eligibility_expires_at,p.rejection_reason,p.created_at,COALESCE((SELECT vehicle_type FROM delivery.vehicles v WHERE v.partner_id=p.id ORDER BY id LIMIT 1),'') AS vehicle_type,COALESCE((SELECT registration_number FROM delivery.vehicles v WHERE v.partner_id=p.id ORDER BY id LIMIT 1),'') AS registration_number,(SELECT count(*) FROM delivery.delivery_assignments a WHERE a.partner_id=p.id AND a.status='DELIVERED') AS delivery_count,concat_ws(' ',p.name,p.phone,u.email,p.id::text) AS search FROM delivery.delivery_partners p JOIN public.users u ON u.id=p.user_id WHERE p.deleted_at IS NULL`,
-    "orders":      `SELECT o.id,'Order #'||left(o.id::text,8) AS name,o.status,o.total_amount,o.currency,COALESCE(c.user_id,c.id) AS customer_id,o.merchant_id,m.name AS restaurant,COALESCE(c.name,'') AS customer,o.created_at,(SELECT count(*) FROM delivery.offers f WHERE f.order_id=o.id) AS offer_attempts,o.status IN('ACCEPTED','PREPARING','READY_FOR_PICKUP') AND NOT EXISTS(SELECT 1 FROM delivery.delivery_assignments a WHERE a.order_id=o.id AND a.status IN('ASSIGNED','PICKED_UP','OUT_FOR_DELIVERY')) AS unassigned,concat_ws(' ',o.id::text,m.name,c.name) AS search FROM public.orders o JOIN public.merchants m ON m.id=o.merchant_id JOIN public.customers c ON c.id=o.customer_id WHERE o.deleted_at IS NULL`,
-    "payments":    `SELECT p.id,'Payment #'||left(p.id::text,8) AS name,p.order_id,p.provider,p.method,p.amount,p.currency,p.status,p.created_at,concat_ws(' ',p.id::text,p.order_id::text,p.provider) AS search FROM payments.payments p UNION ALL SELECT p.merchant_id AS id,m.name AS name,NULL::uuid AS order_id,'STRIPE' AS provider,'ONBOARDING' AS method,p.amount,p.currency,p.status,p.created_at,concat_ws(' ',m.name,p.merchant_id::text,'onboarding') AS search FROM payments.onboarding_payments p JOIN public.merchants m ON m.id=p.merchant_id`,
-    "reviews":     `SELECT r.id,m.name AS name,r.order_id,r.rating,r.comment,COALESCE(c.name,'') AS customer,r.created_at,CASE WHEN r.hidden_at IS NULL THEN 'PUBLISHED' ELSE 'HIDDEN' END AS status,r.moderation_reason,concat_ws(' ',m.name,c.name,r.comment) AS search FROM merchants.restaurant_reviews r JOIN public.merchants m ON m.id=r.merchant_id JOIN public.customers c ON c.id=r.customer_id`,
+    "restaurants": `SELECT m.id,m.name,m.description,COALESCE(m.phone,'') AS phone,COALESCE(u.email,m.email,'') AS email,m.owner_id,m.station_id,(SELECT name FROM public.stations WHERE id=m.station_id) AS station_name,m.latitude,m.longitude,m.approval_status AS status,m.fee_payment_status,m.is_active,m.tags,m.rejection_reason,m.created_at,COALESCE((SELECT address FROM merchants.merchant_branches b WHERE b.merchant_id=m.id AND b.deleted_at IS NULL ORDER BY b.created_at,b.id LIMIT 1),'') AS address,(SELECT count(*) FROM public.orders o WHERE o.merchant_id=m.id) AS order_count,concat_ws(' ',m.name,m.email,u.email,m.id::text) AS search FROM public.merchants m LEFT JOIN public.users u ON u.id=m.owner_id WHERE m.deleted_at IS NULL`,
+    "partners":    `SELECT p.id,p.name,p.phone,COALESCE(u.email,'') AS email,p.user_id,p.station_id,(SELECT name FROM public.stations WHERE id=p.station_id) AS station_name,p.approval_status AS status,p.status AS availability,p.eligibility_expires_at,p.rejection_reason,p.created_at,COALESCE((SELECT vehicle_type FROM delivery.vehicles v WHERE v.partner_id=p.id ORDER BY id LIMIT 1),'') AS vehicle_type,COALESCE((SELECT registration_number FROM delivery.vehicles v WHERE v.partner_id=p.id ORDER BY id LIMIT 1),'') AS registration_number,(SELECT count(*) FROM delivery.delivery_assignments a WHERE a.partner_id=p.id AND a.status='DELIVERED') AS delivery_count,concat_ws(' ',p.name,p.phone,u.email,p.id::text) AS search FROM delivery.delivery_partners p JOIN public.users u ON u.id=p.user_id WHERE p.deleted_at IS NULL`,
+    "orders":      `SELECT o.station_id,(SELECT name FROM public.stations WHERE id=o.station_id) AS station_name,o.id,'Order #'||left(o.id::text,8) AS name,o.status,o.total_amount,o.currency,COALESCE(c.user_id,c.id) AS customer_id,o.merchant_id,m.name AS restaurant,COALESCE(c.name,'') AS customer,o.created_at,(SELECT count(*) FROM delivery.offers f WHERE f.order_id=o.id) AS offer_attempts,o.status IN('ACCEPTED','PREPARING','READY_FOR_PICKUP') AND NOT EXISTS(SELECT 1 FROM delivery.delivery_assignments a WHERE a.order_id=o.id AND a.status IN('ASSIGNED','PICKED_UP','OUT_FOR_DELIVERY')) AS unassigned,concat_ws(' ',o.id::text,m.name,c.name) AS search FROM public.orders o JOIN public.merchants m ON m.id=o.merchant_id JOIN public.customers c ON c.id=o.customer_id WHERE o.deleted_at IS NULL`,
+    "payments":    `SELECT (SELECT station_id FROM public.orders WHERE id=p.order_id) AS station_id,(SELECT s.name FROM public.stations s JOIN public.orders o ON o.station_id=s.id WHERE o.id=p.order_id) AS station_name,p.id,'Payment #'||left(p.id::text,8) AS name,p.order_id,p.provider,p.method,p.amount,p.currency,p.status,p.created_at,concat_ws(' ',p.id::text,p.order_id::text,p.provider) AS search FROM payments.payments p UNION ALL SELECT m.station_id,(SELECT name FROM public.stations WHERE id=m.station_id) AS station_name,p.merchant_id AS id,m.name AS name,NULL::uuid AS order_id,'STRIPE' AS provider,'ONBOARDING' AS method,p.amount,p.currency,p.status,p.created_at,concat_ws(' ',m.name,p.merchant_id::text,'onboarding') AS search FROM payments.onboarding_payments p JOIN public.merchants m ON m.id=p.merchant_id`,
+    "reviews":     `SELECT (SELECT station_id FROM public.orders WHERE id=r.order_id) AS station_id,(SELECT s.name FROM public.stations s JOIN public.orders o ON o.station_id=s.id WHERE o.id=r.order_id) AS station_name,r.id,m.name AS name,r.order_id,r.rating,r.comment,COALESCE(c.name,'') AS customer,r.created_at,CASE WHEN r.hidden_at IS NULL THEN 'PUBLISHED' ELSE 'HIDDEN' END AS status,r.moderation_reason,concat_ws(' ',m.name,c.name,r.comment) AS search FROM merchants.restaurant_reviews r JOIN public.merchants m ON m.id=r.merchant_id JOIN public.customers c ON c.id=r.customer_id`,
     "coupons":     `SELECT id,code AS name,code,description,discount_type,discount_value,min_order_amount,COALESCE(max_discount_amount,0) AS max_discount_amount,is_active,valid_until,used_count,created_at,CASE WHEN is_active THEN 'ACTIVE' ELSE 'INACTIVE' END AS status,concat_ws(' ',code,description) AS search FROM orders.coupons`,
     "audit":       `SELECT a.id,a.action AS name,a.action,a.admin_id,COALESCE(u.email,'') AS actor,a.target_type,COALESCE(a.target_id,'') AS target_id,a.details,a.created_at,'RECORDED' AS status,concat_ws(' ',a.action,a.target_type,a.target_id,u.email) AS search FROM public.admin_audit_logs a JOIN public.users u ON u.id=a.admin_id`,
     "emails":      `SELECT id,subject AS name,recipient,status,attempts,last_error,next_attempt_at,sent_at,created_at,concat_ws(' ',subject,recipient,id::text) AS search FROM notifications.email_outbox`,
@@ -54,14 +56,14 @@ func (r *pgRepo) ConsoleList(ctx context.Context, resource string, filter ListFi
     if filter.Page > 100000 {
         return nil, errors.New("page is too large")
     }
-    where := ` WHERE ($1='' OR s.search ILIKE '%'||$1||'%') AND ($2='' OR s.status=$2) AND ($3='' OR to_jsonb(s)->>'role'=$3)`
-    args := []interface{}{strings.TrimSpace(filter.Search), filter.Status, filter.Role}
+    where := ` WHERE ($1='' OR s.search ILIKE '%'||$1||'%') AND ($2='' OR s.status=$2) AND ($3='' OR to_jsonb(s)->>'role'=$3) AND ($4='' OR to_jsonb(s)->>'station_id'=$4)`
+    args := []interface{}{strings.TrimSpace(filter.Search), filter.Status, filter.Role, filter.StationID}
     result := &Page{Items: []json.RawMessage{}, Page: filter.Page, Limit: filter.Limit}
     if err := r.db.QueryRow(ctx, `SELECT count(*) FROM (`+base+`) s`+where, args...).Scan(&result.Total); err != nil {
         return nil, err
     }
     args = append(args, filter.Limit, (filter.Page-1)*filter.Limit)
-    rows, err := r.db.Query(ctx, `SELECT to_jsonb(s)-'search' FROM (`+base+`) s`+where+` ORDER BY s.created_at DESC,s.id LIMIT $4 OFFSET $5`, args...)
+    rows, err := r.db.Query(ctx, `SELECT to_jsonb(s)-'search' FROM (`+base+`) s`+where+` ORDER BY s.created_at DESC,s.id LIMIT $5 OFFSET $6`, args...)
     if err != nil {
         return nil, err
     }
@@ -91,14 +93,14 @@ func (r *pgRepo) ConsoleDetail(ctx context.Context, resource, id string) (map[st
     case "support":
         related["messages"] = `SELECT jsonb_build_object('id',m.id,'name',COALESCE(u.full_name,'Partner'),'body',m.body,'role',u.role,'created_at',m.created_at) FROM public.partner_support_messages m JOIN public.users u ON u.id=m.author_id WHERE ticket_id=$1 ORDER BY m.created_at,m.id`
     case "customers", "users":
-        related["orders"] = `SELECT jsonb_build_object('id',o.id,'name',m.name,'status',o.status,'total_amount',o.total_amount,'currency',o.currency,'created_at',o.created_at) FROM public.orders o JOIN public.merchants m ON m.id=o.merchant_id WHERE o.customer_id IN(SELECT id FROM public.customers WHERE id=$1 OR user_id=$1) ORDER BY o.created_at DESC LIMIT 50`
+        related["orders"] = `SELECT jsonb_build_object('id',o.id,'name',m.name,'station_id',o.station_id,'station_name',(SELECT name FROM public.stations WHERE id=o.station_id),'status',o.status,'total_amount',o.total_amount,'currency',o.currency,'created_at',o.created_at) FROM public.orders o JOIN public.merchants m ON m.id=o.merchant_id WHERE o.customer_id IN(SELECT id FROM public.customers WHERE id=$1 OR user_id=$1) ORDER BY o.created_at DESC LIMIT 50`
         related["addresses"] = `SELECT jsonb_build_object('id',a.id,'label',a.label,'address',concat_ws(', ',a.address_line1,a.address_line2,a.city,a.state,a.postal_code)) FROM users.customer_addresses a WHERE a.customer_id IN(SELECT id FROM public.customers WHERE id=$1 OR user_id=$1) AND a.deleted_at IS NULL`
     case "restaurants":
         related["menu"] = `SELECT jsonb_build_object('id',i.id,'name',i.name,'description',i.description,'price',i.base_price,'currency',i.currency,'is_available',i.is_available,'category',c.name) FROM catalog.items i JOIN catalog.categories c ON c.id=i.category_id WHERE i.merchant_id=$1 AND i.deleted_at IS NULL ORDER BY c.sort_order,i.name`
-        related["orders"] = `SELECT jsonb_build_object('id',id,'name','Order #'||left(id::text,8),'status',status,'total_amount',total_amount,'currency',currency,'created_at',created_at) FROM public.orders WHERE merchant_id=$1 ORDER BY created_at DESC LIMIT 50`
+        related["orders"] = `SELECT jsonb_build_object('id',id,'name','Order #'||left(id::text,8),'station_id',station_id,'station_name',(SELECT name FROM public.stations WHERE id=orders.station_id),'status',status,'total_amount',total_amount,'currency',currency,'created_at',created_at) FROM public.orders WHERE merchant_id=$1 ORDER BY created_at DESC LIMIT 50`
         related["hours"] = `SELECT jsonb_build_object('id',h.id,'day',h.day_of_week,'opens',h.opens_at::text,'closes',h.closes_at::text,'closed',h.is_closed) FROM merchants.merchant_operating_hours h JOIN merchants.merchant_branches b ON b.id=h.branch_id WHERE b.merchant_id=$1 ORDER BY h.day_of_week`
     case "partners":
-        related["deliveries"] = `SELECT jsonb_build_object('id',a.order_id,'name','Order #'||left(a.order_id::text,8),'status',a.status,'created_at',a.created_at) FROM delivery.delivery_assignments a WHERE a.partner_id=$1 ORDER BY a.created_at DESC LIMIT 50`
+        related["deliveries"] = `SELECT jsonb_build_object('id',a.order_id,'name','Order #'||left(a.order_id::text,8),'station_id',a.station_id,'station_name',(SELECT name FROM public.stations WHERE id=a.station_id),'status',a.status,'created_at',a.created_at) FROM delivery.delivery_assignments a WHERE a.partner_id=$1 ORDER BY a.created_at DESC LIMIT 50`
         related["earnings"] = `SELECT jsonb_build_object('total_deliveries',count(*),'total_earnings',COALESCE(sum(delivery_fee+tip_amount),0),'tips',COALESCE(sum(tip_amount),0)) FROM delivery.rider_earnings WHERE partner_id=$1`
     case "orders":
         related["items"] = `SELECT jsonb_build_object('id',id,'name',name_snapshot,'quantity',quantity,'unit_price',unit_price,'total_price',total_price) FROM orders.order_items WHERE order_id=$1`
@@ -127,13 +129,15 @@ func (r *pgRepo) ConsoleDetail(ctx context.Context, resource, id string) (map[st
 }
 
 type ProfileEdit struct {
-    Name               string `json:"name"`
-    Phone              string `json:"phone"`
-    Description        string `json:"description"`
-    Address            string `json:"address"`
-    Reason             string `json:"reason"`
-    VehicleType        string `json:"vehicle_type"`
-    RegistrationNumber string `json:"registration_number"`
+    Latitude           *float64 `json:"latitude"`
+    Longitude          *float64 `json:"longitude"`
+    Name               string   `json:"name"`
+    Phone              string   `json:"phone"`
+    Description        string   `json:"description"`
+    Address            string   `json:"address"`
+    Reason             string   `json:"reason"`
+    VehicleType        string   `json:"vehicle_type"`
+    RegistrationNumber string   `json:"registration_number"`
 }
 
 func (r *pgRepo) ConsoleEditProfile(ctx context.Context, actor, resource, id string, input ProfileEdit) error {
@@ -148,6 +152,9 @@ func (r *pgRepo) ConsoleEditProfile(ctx context.Context, actor, resource, id str
         return err
     }
     defer tx.Rollback(ctx)
+    if err = stations.LockCoverage(ctx, tx); err != nil {
+        return err
+    }
     if err = checkConsoleAdmin(ctx, tx, actor); err != nil {
         return err
     }
@@ -163,9 +170,12 @@ func (r *pgRepo) ConsoleEditProfile(ctx context.Context, actor, resource, id str
             _, err = tx.Exec(ctx, `UPDATE public.customers SET name=$2,phone=NULLIF($3,''),updated_at=now() WHERE id=$1 OR user_id=$1`, id, input.Name, input.Phone)
         }
     case "restaurants":
+        if err = stations.UpdateRestaurantLocation(ctx, tx, id, input.Address, input.Latitude, input.Longitude); err != nil {
+            return err
+        }
         err = tx.QueryRow(ctx, `UPDATE public.merchants SET name=$2,phone=$3,description=$4,updated_at=now() WHERE id=$1 AND deleted_at IS NULL RETURNING id`, id, input.Name, input.Phone, input.Description).Scan(&changed)
         if err == nil && input.Address != "" {
-            tag, e := tx.Exec(ctx, `UPDATE merchants.merchant_branches SET address=$2,updated_at=now(),updated_by=$3 WHERE id=(SELECT id FROM merchants.merchant_branches WHERE merchant_id=$1 AND deleted_at IS NULL ORDER BY created_at,id LIMIT 1)`, id, input.Address, actor)
+            tag, e := tx.Exec(ctx, `UPDATE merchants.merchant_branches SET address=$2,latitude=(SELECT latitude FROM public.merchants WHERE id=merchant_id),longitude=(SELECT longitude FROM public.merchants WHERE id=merchant_id),updated_at=now(),updated_by=$3 WHERE id=(SELECT id FROM merchants.merchant_branches WHERE merchant_id=$1 AND deleted_at IS NULL ORDER BY created_at,id LIMIT 1)`, id, input.Address, actor)
             err = e
             if err == nil && tag.RowsAffected() == 0 {
                 _, err = tx.Exec(ctx, `INSERT INTO merchants.merchant_branches(merchant_id,name,address,created_by,updated_by) VALUES($1,$2,$3,$4,$4)`, id, input.Name, input.Address, actor)
@@ -232,6 +242,9 @@ func (r *pgRepo) ConsoleDisable(ctx context.Context, actor, id string, disabled 
         return err
     }
     defer tx.Rollback(ctx)
+    if err = stations.LockCoverage(ctx, tx); err != nil {
+        return err
+    }
     if _, err = tx.Exec(ctx, `SELECT pg_advisory_xact_lock(894213)`); err != nil {
         return err
     }
@@ -283,6 +296,9 @@ func (r *pgRepo) ConsoleAvailability(ctx context.Context, actor, resource, id st
         return err
     }
     defer tx.Rollback(ctx)
+    if err = stations.LockCoverage(ctx, tx); err != nil {
+        return err
+    }
     if err = checkConsoleAdmin(ctx, tx, actor); err != nil {
         return err
     }
