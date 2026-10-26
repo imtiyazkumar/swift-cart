@@ -104,7 +104,7 @@ func (r *pgRepo) ConsoleDetail(ctx context.Context, resource, id string) (map[st
         related["earnings"] = `SELECT jsonb_build_object('total_deliveries',count(*),'total_earnings',COALESCE(sum(delivery_fee+tip_amount),0),'tips',COALESCE(sum(tip_amount),0)) FROM delivery.rider_earnings WHERE partner_id=$1`
     case "orders":
         related["items"] = `SELECT jsonb_build_object('id',id,'name',name_snapshot,'quantity',quantity,'unit_price',unit_price,'total_price',total_price) FROM orders.order_items WHERE order_id=$1`
-        related["timeline"] = `SELECT jsonb_build_object('id',id,'status',status,'notes',COALESCE(notes,''),'created_at',created_at) FROM orders.order_status_history WHERE order_id=$1 ORDER BY created_at`
+        related["timeline"] = `SELECT jsonb_build_object('id',id,'status',status,'event_type',event_type,'changed_by',changed_by,'notes',COALESCE(notes,''),'created_at',created_at) FROM orders.order_events WHERE order_id=$1 ORDER BY created_at,id`
         related["offers"] = `SELECT jsonb_build_object('id',f.id,'partner_id',f.partner_id,'name',p.name,'status',f.status,'expires_at',f.expires_at,'created_at',f.created_at) FROM delivery.offers f JOIN delivery.delivery_partners p ON p.id=f.partner_id WHERE f.order_id=$1 ORDER BY f.created_at`
         related["address"] = `SELECT delivery_address FROM public.orders WHERE id=$1`
     }
@@ -117,7 +117,7 @@ func (r *pgRepo) ConsoleDetail(ctx context.Context, resource, id string) (map[st
     }
     if resource == "restaurants" || resource == "partners" {
         var application json.RawMessage
-        err := r.db.QueryRow(ctx, `SELECT jsonb_build_object('data',data,'document_ids',document_ids,'created_at',created_at) FROM public.partner_applications WHERE resource_id=$1`, id).Scan(&application)
+        err := r.db.QueryRow(ctx, `SELECT jsonb_build_object('data',data,'document_ids',document_ids,'documents',COALESCE((SELECT jsonb_agg(jsonb_build_object('id',d.id,'document_type',d.document_type,'content_type',d.content_type,'byte_size',d.byte_size) ORDER BY array_position(a.document_ids,d.id)) FROM public.private_documents d WHERE d.id=ANY(a.document_ids) AND d.user_id=a.user_id),'[]'::jsonb),'created_at',created_at) FROM public.partner_applications a WHERE resource_id=$1`, id).Scan(&application)
         if err != nil && !errors.Is(err, pgx.ErrNoRows) {
             return nil, err
         }

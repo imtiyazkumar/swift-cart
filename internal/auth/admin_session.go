@@ -52,6 +52,7 @@ func registerAdminSessions(g *echo.Group, cfg *config.Config, pool *pgxpool.Pool
         var input struct {
             Email    string `json:"email"`
             Password string `json:"password"`
+ OTP string `json:"otp"`
         }
         if err := c.Bind(&input); err != nil || len(input.Password) > 72 {
             return echo.NewHTTPError(400, "invalid credentials")
@@ -60,6 +61,7 @@ func registerAdminSessions(g *echo.Group, cfg *config.Config, pool *pgxpool.Pool
         if err != nil || user.VerifyPassword(input.Password) != nil {
             return echo.NewHTTPError(401, "invalid credentials")
         }
+        if err:=requireAdminMFA(c,pool,user,input.OTP);err!=nil{return err}
         if user.Role != "ADMIN" {
             return echo.NewHTTPError(403, "administrator access required")
         }
@@ -87,14 +89,8 @@ func registerAdminSessions(g *echo.Group, cfg *config.Config, pool *pgxpool.Pool
             return echo.NewHTTPError(503, "session service unavailable")
         }
         defer tx.Rollback(c.Request().Context())
-        tag, err := tx.Exec(c.Request().Context(), `UPDATE auth.refresh_sessions SET revoked_at=now() WHERE token_hash=$1 AND revoked_at IS NULL AND expires_at>now()`, tokenHash(cookie.Value))
-        if err != nil {
-            return echo.NewHTTPError(503, "session service unavailable")
-        }
-        if tag.RowsAffected() != 1 {
-            setCookie(c, "", -1)
-            return echo.NewHTTPError(401, "session expired")
-        }
+        family,absolute,err:=consumeRefresh(c.Request().Context(),tx,cookie.Value,claims.UserID)
+        if err!=nil{setCookie(c,"",-1);return echo.NewHTTPError(401,"session expired or replayed")}
         user := &User{}
         if err = tx.QueryRow(c.Request().Context(), `SELECT id,COALESCE(email,''),COALESCE(full_name,''),role FROM public.users WHERE id=$1 AND role='ADMIN' AND disabled_at IS NULL AND deleted_at IS NULL`, claims.UserID).Scan(&user.ID, &user.Email, &user.FullName, &user.Role); err != nil {
             setCookie(c, "", -1)
@@ -104,7 +100,7 @@ func registerAdminSessions(g *echo.Group, cfg *config.Config, pool *pgxpool.Pool
         if err != nil {
             return echo.NewHTTPError(500, "could not rotate session")
         }
-        if _, err = tx.Exec(c.Request().Context(), `INSERT INTO auth.refresh_sessions(token_hash,user_id,expires_at) VALUES($1,$2,now()+interval '7 days')`, tokenHash(refresh), user.ID); err != nil {
+        if _, err = tx.Exec(c.Request().Context(), `INSERT INTO auth.refresh_sessions(token_hash,user_id,expires_at,family_id,family_expires_at,parent_hash) VALUES($1,$2,LEAST(now()+interval '7 days',$4::timestamptz),$3,$4,$5)`, tokenHash(refresh), user.ID,family,absolute,tokenHash(cookie.Value)); err != nil {
             return echo.NewHTTPError(503, "session service unavailable")
         }
         if err = tx.Commit(c.Request().Context()); err != nil {
@@ -116,7 +112,7 @@ func registerAdminSessions(g *echo.Group, cfg *config.Config, pool *pgxpool.Pool
         cookie, err := c.Cookie(adminCookieName)
         setCookie(c, "", -1)
         if err == nil {
-            if _, err = pool.Exec(c.Request().Context(), `UPDATE auth.refresh_sessions SET revoked_at=now() WHERE token_hash=$1`, tokenHash(cookie.Value)); err != nil {
+            if _, err = pool.Exec(c.Request().Context(), `WITH revoked AS (UPDATE auth.refresh_sessions SET revoked_at=now() WHERE token_hash=$1 AND revoked_at IS NULL RETURNING user_id) UPDATE public.users SET tokens_invalid_before=date_trunc('milliseconds',clock_timestamp()) WHERE id IN(SELECT user_id FROM revoked)`, tokenHash(cookie.Value)); err != nil {
                 return echo.NewHTTPError(503, "session could not be revoked; please retry")
             }
         }

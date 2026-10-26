@@ -1,0 +1,5 @@
+CREATE TABLE delivery.completion_challenges(order_id uuid PRIMARY KEY REFERENCES public.orders(id),code_hash text NOT NULL,attempts integer NOT NULL DEFAULT 0,expires_at timestamptz NOT NULL,consumed_at timestamptz);
+CREATE TABLE delivery.completion_proofs(order_id uuid PRIMARY KEY REFERENCES public.orders(id),partner_id uuid NOT NULL REFERENCES delivery.delivery_partners(id),method text NOT NULL DEFAULT 'CUSTOMER_CODE',created_at timestamptz NOT NULL DEFAULT now());
+CREATE TABLE finance.cod_custody(order_id uuid PRIMARY KEY REFERENCES finance.order_financials(order_id),partner_id uuid NOT NULL REFERENCES delivery.delivery_partners(id),amount bigint NOT NULL CHECK(amount>0),created_at timestamptz NOT NULL DEFAULT now());
+CREATE TRIGGER cod_custody_guard BEFORE UPDATE OR DELETE ON finance.cod_custody FOR EACH ROW EXECUTE FUNCTION finance.immutable();
+CREATE TRIGGER delivery_proof_guard BEFORE UPDATE OR DELETE ON delivery.completion_proofs FOR EACH ROW EXECUTE FUNCTION finance.immutable();

@@ -5,6 +5,7 @@ import (
     "encoding/json"
     "errors"
     "strings"
+ "os"
 
     "github.com/google/uuid"
     "github.com/imtiyazkumar/yember-core/internal/stations"
@@ -65,6 +66,8 @@ func (s *Service) Submit(ctx context.Context, userID, kind string, a Application
         return "", err
     }
     defer tx.Rollback(ctx)
+    if os.Getenv("ENVIRONMENT")=="production"{var bank bool;if err=tx.QueryRow(ctx,`SELECT EXISTS(SELECT 1 FROM finance.bank_accounts WHERE user_id=$1 AND status IN ('PENDING','VERIFIED'))`,userID).Scan(&bank);err!=nil{return "",err};if !bank{return "",errors.New("settlement bank account required before onboarding")}}
+
     if err = stations.LockCoverage(ctx, tx); err != nil {
         return "", err
     }

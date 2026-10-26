@@ -87,3 +87,5 @@ The new migration was validated in isolated databases; installation into an
 existing application database is an explicit operator startup step.
 
 Operational station setup and strict coverage contracts: [stations](stations.md).
+
+Order timelines read `orders.order_events` (migration 035). Core captures order creation and each status transition automatically in the transaction that changes the order. Existing history writers enrich the event with the actor and reason without duplicating the transition. Existing history timestamps are retained; missing intermediate historical timestamps remain unknown. Timeline timestamps include seconds.

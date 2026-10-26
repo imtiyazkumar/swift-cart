@@ -162,7 +162,7 @@ func (r *pgRepo) ListRestaurants(ctx context.Context, city, search string) ([]*R
                COALESCE((SELECT round(avg(rating),1)::text FROM merchants.restaurant_reviews WHERE merchant_id=m.id AND hidden_at IS NULL),'') as rating, (SELECT count(*)::text FROM merchants.restaurant_reviews WHERE merchant_id=m.id AND hidden_at IS NULL) as reviews, '' as time, '' as distance,
                '' as fee, '' as offer, '' as image, '' as accent
         FROM public.merchants m
-        WHERE m.station_id=$2 AND public.station_covers(m.station_id,m.latitude,m.longitude) AND m.is_active = true AND m.approval_status='APPROVED' AND m.fee_payment_status='PAID' AND m.deleted_at IS NULL
+        WHERE m.station_id=$2 AND public.station_covers(m.station_id,m.latitude,m.longitude) AND m.is_active = true AND public.restaurant_open_at(m.id,now()) AND m.approval_status='APPROVED' AND m.fee_payment_status='PAID' AND m.deleted_at IS NULL
     `
     query += ` AND ($1 = '' OR m.name ILIKE '%' || $1 || '%' OR EXISTS (
         SELECT 1 FROM catalog.items i
@@ -208,7 +208,7 @@ func (r *pgRepo) GetRestaurantByID(ctx context.Context, id string) (*Restaurant,
                COALESCE((SELECT round(avg(rating),1)::text FROM merchants.restaurant_reviews WHERE merchant_id=m.id AND hidden_at IS NULL),'') as rating, (SELECT count(*)::text FROM merchants.restaurant_reviews WHERE merchant_id=m.id AND hidden_at IS NULL) as reviews, '' as time, '' as distance,
                '' as fee, '' as offer, '' as image, '' as accent
         FROM public.merchants m
-        WHERE m.id = $1 AND m.station_id=$2 AND public.station_covers(m.station_id,m.latitude,m.longitude) AND m.is_active = true AND m.approval_status='APPROVED' AND m.fee_payment_status='PAID' AND m.deleted_at IS NULL
+        WHERE m.id = $1 AND m.station_id=$2 AND public.station_covers(m.station_id,m.latitude,m.longitude) AND m.is_active = true AND public.restaurant_open_at(m.id,now()) AND m.approval_status='APPROVED' AND m.fee_payment_status='PAID' AND m.deleted_at IS NULL
     `
     var rest Restaurant
     err := r.db.QueryRow(ctx, query, id, station).Scan(

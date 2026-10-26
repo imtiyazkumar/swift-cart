@@ -6,6 +6,7 @@ import (
     "strings"
 
     "github.com/jackc/pgx/v5"
+"github.com/jackc/pgx/v5/pgxpool"
     "github.com/labstack/echo/v4"
 )
 
@@ -150,3 +151,5 @@ func (r *Repository) SupportReply(ctx context.Context, user, ticket, body string
     }
     return nil
 }
+
+func RegisterCustomerSupport(g *echo.Group,pool *pgxpool.Pool){registerSupport(g,&Repository{pool:pool})}

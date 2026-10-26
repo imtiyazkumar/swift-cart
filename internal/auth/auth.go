@@ -11,6 +11,7 @@ type Claims struct {
     UserID    string `json:"sub"`
     Role      string `json:"role"`
     TokenType string `json:"token_type"`
+ IssuedMillis int64 `json:"issued_millis"`
     jwt.RegisteredClaims
 }
 
@@ -21,6 +22,7 @@ func GenerateAccessToken(secret, userID, role string) (string, error) {
         UserID:    userID,
         Role:      role,
         TokenType: "access",
+ IssuedMillis: now.UnixMilli(),
         RegisteredClaims: jwt.RegisteredClaims{
             ID:        uuid.NewString(),
             IssuedAt:  jwt.NewNumericDate(now),
@@ -38,6 +40,7 @@ func GenerateRefreshToken(secret, userID, role string) (string, error) {
         UserID:    userID,
         Role:      role,
         TokenType: "refresh",
+ IssuedMillis: now.UnixMilli(),
         RegisteredClaims: jwt.RegisteredClaims{
             ID:        uuid.NewString(),
             IssuedAt:  jwt.NewNumericDate(now),

@@ -1,4 +1,4 @@
-FROM golang:1.22-alpine AS builder
+FROM golang:1.27.3-alpine AS builder
 WORKDIR /app
 
 # Copy go.mod and go.sum first for caching
@@ -12,8 +12,10 @@ COPY . ./
 RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags "-s -w" -o /yember-core-api ./cmd/api
 
 # Final image
-FROM alpine:latest
+FROM alpine:3.23
 RUN apk --no-cache add ca-certificates
 COPY --from=builder /yember-core-api /usr/local/bin/yember-core-api
+RUN addgroup -S yember && adduser -S -G yember yember
+USER yember
 EXPOSE 8080
 ENTRYPOINT ["yember-core-api"]

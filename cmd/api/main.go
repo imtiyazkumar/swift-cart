@@ -1,162 +1,221 @@
 package main
 
 import (
-    "context"
-    "log"
-    "net/http"
-    "os"
-    "os/signal"
-    "strings"
-    "syscall"
-    "time"
+	"context"
+	"fmt"
+	"go.uber.org/zap"
+	"log"
+	"net"
+	"net/http"
+	"os"
+	"os/signal"
+	"strings"
+	"sync"
+	"syscall"
+	"time"
 
-    "github.com/joho/godotenv"
-    "github.com/labstack/echo/v4"
-    "github.com/labstack/echo/v4/middleware"
+	"github.com/joho/godotenv"
+	"github.com/labstack/echo/v4"
+	"github.com/labstack/echo/v4/middleware"
 
-    "github.com/imtiyazkumar/yember-core/config"
-    "github.com/imtiyazkumar/yember-core/internal/admin"
-    "github.com/imtiyazkumar/yember-core/internal/auth"
-    "github.com/imtiyazkumar/yember-core/internal/catalog"
-    "github.com/imtiyazkumar/yember-core/internal/checkout"
-    "github.com/imtiyazkumar/yember-core/internal/customer"
-    "github.com/imtiyazkumar/yember-core/internal/delivery"
-    "github.com/imtiyazkumar/yember-core/internal/dispatch"
-    "github.com/imtiyazkumar/yember-core/internal/email"
-    "github.com/imtiyazkumar/yember-core/internal/fees"
-    "github.com/imtiyazkumar/yember-core/internal/merchant"
-    "github.com/imtiyazkumar/yember-core/internal/notifications"
-    "github.com/imtiyazkumar/yember-core/internal/onboarding"
-    "github.com/imtiyazkumar/yember-core/internal/order"
-    "github.com/imtiyazkumar/yember-core/internal/partnerops"
-    "github.com/imtiyazkumar/yember-core/internal/payments"
-    "github.com/imtiyazkumar/yember-core/internal/restaurant"
-    "github.com/imtiyazkumar/yember-core/internal/rider"
-    "github.com/imtiyazkumar/yember-core/internal/stations"
-    "github.com/imtiyazkumar/yember-core/pkg/db"
-    "github.com/imtiyazkumar/yember-core/pkg/events"
-    "github.com/imtiyazkumar/yember-core/pkg/logger"
-    custommiddleware "github.com/imtiyazkumar/yember-core/pkg/middleware"
+	"github.com/imtiyazkumar/yember-core/config"
+	"github.com/imtiyazkumar/yember-core/internal/admin"
+	"github.com/imtiyazkumar/yember-core/internal/auth"
+	"github.com/imtiyazkumar/yember-core/internal/catalog"
+	"github.com/imtiyazkumar/yember-core/internal/checkout"
+	"github.com/imtiyazkumar/yember-core/internal/customer"
+	"github.com/imtiyazkumar/yember-core/internal/delivery"
+	"github.com/imtiyazkumar/yember-core/internal/dispatch"
+	"github.com/imtiyazkumar/yember-core/internal/email"
+	"github.com/imtiyazkumar/yember-core/internal/fees"
+	"github.com/imtiyazkumar/yember-core/internal/finance"
+	"github.com/imtiyazkumar/yember-core/internal/merchant"
+	"github.com/imtiyazkumar/yember-core/internal/notifications"
+	"github.com/imtiyazkumar/yember-core/internal/onboarding"
+	"github.com/imtiyazkumar/yember-core/internal/order"
+	"github.com/imtiyazkumar/yember-core/internal/partnerops"
+	"github.com/imtiyazkumar/yember-core/internal/payments"
+	"github.com/imtiyazkumar/yember-core/internal/restaurant"
+	"github.com/imtiyazkumar/yember-core/internal/rider"
+	"github.com/imtiyazkumar/yember-core/internal/stations"
+	"github.com/imtiyazkumar/yember-core/pkg/db"
+	"github.com/imtiyazkumar/yember-core/pkg/events"
+	"github.com/imtiyazkumar/yember-core/pkg/logger"
+	custommiddleware "github.com/imtiyazkumar/yember-core/pkg/middleware"
 )
 
 func main() {
-    _ = godotenv.Load()
+	_ = godotenv.Load()
 
-    // Load configuration
-    cfg, err := config.Load()
-    if err != nil {
-        log.Fatalf("failed to load config: %v", err)
-    }
+	// Load configuration
+	cfg, err := config.Load()
+	if err != nil {
+		log.Fatalf("failed to load config: %v", err)
+	}
 
-    // Initialize logger
-    logg := logger.New(cfg.LogLevel)
-    defer logg.Sync()
+	// Initialize logger
+	logg := logger.New(cfg.LogLevel)
+	defer logg.Sync()
 
-    // Initialize DB
-    pg, err := db.NewPostgres(cfg.PostgresDSN)
-    if err != nil {
-        logg.Sugar().Fatalw("db init", "error", err)
-    }
-    defer pg.Close()
+	// Initialize DB
+	pg, err := db.NewPostgres(cfg.PostgresDSN)
+	if err != nil {
+		logg.Sugar().Fatalw("db init", "error", err)
+	}
+	defer pg.Close()
 
-    // Echo instance
-    e := echo.New()
-    e.HideBanner = true
-    e.IPExtractor = echo.ExtractIPDirect()
-    e.Logger = logger.NewEchoLogger(logg)
+	// Echo instance
+	e := echo.New()
+	e.HideBanner = true
+	e.HTTPErrorHandler = func(err error, c echo.Context) {
+		code := 500
+		message := "internal server error"
+		if he, ok := err.(*echo.HTTPError); ok {
+			code = he.Code
+			if code < 500 {
+				message = fmt.Sprint(he.Message)
+			}
+		}
+		if strings.Contains(message, "SQLSTATE") {
+			message = "request could not be processed"
+		}
+		if code >= 500 {
+			logg.Warn("request failed", zap.Error(err), zap.String("request_id", c.Response().Header().Get(echo.HeaderXRequestID)))
+		}
+		if !c.Response().Committed {
+			_ = c.JSON(code, map[string]string{"message": message, "request_id": c.Response().Header().Get(echo.HeaderXRequestID)})
+		}
+	}
 
-    // Global Middleware
-    e.Use(middleware.Recover())
-    e.Use(middleware.RequestID())
-    e.Use(middleware.CORSWithConfig(middleware.CORSConfig{
-        AllowOrigins:     strings.Split(cfg.CORSAllowedOrigins, ","),
-        AllowMethods:     []string{http.MethodGet, http.MethodPost, http.MethodPut, http.MethodPatch, http.MethodDelete, http.MethodOptions},
-        AllowHeaders:     []string{echo.HeaderAuthorization, echo.HeaderContentType, echo.HeaderXRequestID, "X-Yember-Admin"},
-        AllowCredentials: true,
-    }))
-    e.Use(middleware.Secure())
-    e.Use(middleware.TimeoutWithConfig(middleware.TimeoutConfig{Timeout: 30 * time.Second}))
-    e.Use(custommiddleware.RequestLogger(logg))
-    e.Use(custommiddleware.NewInMemoryRateLimiter(custommiddleware.RateLimiterConfig{Limit: 120, Period: time.Minute}))
+	e.IPExtractor = echo.ExtractIPDirect()
+	if os.Getenv("TRUST_PROXY_CIDRS") != "" {
+		options := []echo.TrustOption{echo.TrustLoopback(false), echo.TrustLinkLocal(false), echo.TrustPrivateNet(false)}
+		for _, value := range strings.Split(os.Getenv("TRUST_PROXY_CIDRS"), ",") {
+			_, network, parseErr := net.ParseCIDR(strings.TrimSpace(value))
+			if parseErr != nil {
+				log.Fatalf("invalid trusted proxy network")
+			}
+			options = append(options, echo.TrustIPRange(network))
+		}
+		e.IPExtractor = echo.ExtractIPFromXFFHeader(options...)
+	}
+	e.Server.ReadHeaderTimeout = 5 * time.Second
+	e.Server.IdleTimeout = 60 * time.Second
+	e.Server.MaxHeaderBytes = 32 << 10
+	e.Logger = logger.NewEchoLogger(logg)
 
-    // Health & Status endpoints
-    e.GET("/", homeHandler)
-    e.GET("/healthz", healthHandler)
-    e.GET("/readyz", readyHandler(pg))
+	// Global Middleware
+	e.Use(middleware.Recover())
+	e.Use(middleware.BodyLimit("12M"))
+	e.Use(middleware.RequestID())
+	e.Use(middleware.CORSWithConfig(middleware.CORSConfig{
+		AllowOrigins:     strings.Split(cfg.CORSAllowedOrigins, ","),
+		AllowMethods:     []string{http.MethodGet, http.MethodPost, http.MethodPut, http.MethodPatch, http.MethodDelete, http.MethodOptions},
+		AllowHeaders:     []string{echo.HeaderAuthorization, echo.HeaderContentType, echo.HeaderXRequestID, "X-Yember-Admin"},
+		AllowCredentials: true,
+	}))
+	e.Use(middleware.Secure())
+	e.Use(middleware.TimeoutWithConfig(middleware.TimeoutConfig{Timeout: 30 * time.Second}))
+	e.Use(custommiddleware.RequestLogger(logg))
+	e.Use(custommiddleware.DistributedRateLimiter(pg.Pool, "api", 600))
 
-    // API version group
-    api := e.Group("/api/v1")
+	// Health & Status endpoints
+	e.GET("/", homeHandler)
+	e.GET("/healthz", healthHandler)
+	e.GET("/readyz", readyHandler(pg))
 
-    // Register Auth routes
-    auth.RegisterRoutes(e, cfg, logg, pg.Pool)
-    stations.Register(api, pg.Pool, cfg, logg)
-    onboarding.Register(api, pg.Pool, cfg, logg)
-    partnerops.Register(api, pg.Pool, cfg, logg)
-    fees.Register(api, pg.Pool, cfg, logg)
-    restaurant.RegisterImages(api, pg.Pool, cfg, logg)
-    dispatch.RegisterSettings(api, pg.Pool, cfg, logg)
+	// API version group
+	api := e.Group("/api/v1")
 
-    // Initialize domain services
-    eventBus := events.NewInMemoryBus()
-    customerSvc := customer.NewService(customer.NewPostgresRepo(pg.Pool, logg))
-    riderSvc := rider.NewService(rider.NewPostgresRepo(pg.Pool, logg))
-    restaurantSvc := restaurant.NewService(restaurant.NewPostgresRepo(pg.Pool, logg))
-    adminSvc := admin.NewService(admin.NewPostgresRepo(pg.Pool, logg))
-    merchantSvc := merchant.NewService(merchant.NewPostgresRepo(pg.Pool, logg))
-    orderSvc := order.NewService(order.NewPostgresRepo(pg.Pool, logg))
-    catalogSvc := catalog.NewService(catalog.NewPostgresRepo(pg.Pool, logg))
-    deliverySvc := delivery.NewService(delivery.NewPostgresRepo(pg.Pool, logg))
-    paymentSvc := payments.NewService(payments.NewPostgresRepo(pg.Pool, logg))
-    notificationSvc := notifications.NewService(notifications.NewPostgresRepo(pg.Pool, logg), eventBus)
-    notificationSvc.SubscribeOrderEvents()
-    workerContext, stopWorkers := context.WithCancel(context.Background())
-    defer stopWorkers()
-    go email.Run(workerContext, pg.Pool, cfg, logg)
-    go dispatch.Run(workerContext, pg.Pool, logg)
+	// Register Auth routes
+	auth.RegisterRoutes(e, cfg, logg, pg.Pool)
+	stations.Register(api, pg.Pool, cfg, logg)
+	onboarding.Register(api, pg.Pool, cfg, logg)
+	partnerops.Register(api, pg.Pool, cfg, logg)
+	fees.Register(api, pg.Pool, cfg, logg)
+	finance.Register(api, pg.Pool, cfg, logg)
+	notifications.RegisterPush(api, pg.Pool, cfg, logg)
+	restaurant.RegisterImages(api, pg.Pool, cfg, logg)
+	dispatch.RegisterSettings(api, pg.Pool, cfg, logg)
 
-    // Register Ecosystem Persona Routes
-    customerGroup := api.Group("/customer", auth.JWTMiddleware(cfg.JWTSecret, logg, pg.Pool), auth.RBACMiddleware("CUSTOMER"))
-    riderGroup := api.Group("/rider", auth.JWTMiddleware(cfg.JWTSecret, logg, pg.Pool), auth.RBACMiddleware("DELIVERY_PARTNER"))
-    restaurantGroup := api.Group("/restaurant", auth.JWTMiddleware(cfg.JWTSecret, logg, pg.Pool), auth.RBACMiddleware("MERCHANT_OWNER"))
-    adminGroup := api.Group("/admin", auth.JWTMiddleware(cfg.JWTSecret, logg, pg.Pool), auth.RBACMiddleware("ADMIN"))
-    customer.RegisterRoutes(customerGroup, cfg, logg, customerSvc)
-    checkout.RegisterRoutes(customerGroup, checkout.New(pg.Pool))
-    rider.RegisterRoutes(riderGroup, cfg, logg, riderSvc)
-    restaurant.RegisterRoutes(restaurantGroup, cfg, logg, restaurantSvc)
-    admin.RegisterRoutes(adminGroup, cfg, logg, adminSvc)
+	// Initialize domain services
+	eventBus := events.NewInMemoryBus()
+	customerSvc := customer.NewService(customer.NewPostgresRepo(pg.Pool, logg))
+	riderSvc := rider.NewService(rider.NewPostgresRepo(pg.Pool, logg))
+	restaurantSvc := restaurant.NewService(restaurant.NewPostgresRepo(pg.Pool, logg))
+	adminSvc := admin.NewService(admin.NewPostgresRepo(pg.Pool, logg))
+	merchantSvc := merchant.NewService(merchant.NewPostgresRepo(pg.Pool, logg))
+	orderSvc := order.NewService(order.NewPostgresRepo(pg.Pool, logg))
+	catalogSvc := catalog.NewService(catalog.NewPostgresRepo(pg.Pool, logg))
+	deliverySvc := delivery.NewService(delivery.NewPostgresRepo(pg.Pool, logg))
+	paymentSvc := payments.NewService(payments.NewPostgresRepo(pg.Pool, logg))
+	notificationSvc := notifications.NewService(notifications.NewPostgresRepo(pg.Pool, logg), eventBus)
+	notificationSvc.SubscribeOrderEvents()
+	workerContext, stopWorkers := context.WithCancel(context.Background())
+	defer stopWorkers()
+	var workers sync.WaitGroup
+	runWorker := func(run func()) { workers.Add(1); go func() { defer workers.Done(); run() }() }
 
-    // Legacy & Shared domain routes
-    merchant.RegisterRoutes(api.Group("/merchant", auth.JWTMiddleware(cfg.JWTSecret, logg, pg.Pool), auth.RBACMiddleware("ADMIN")), cfg, logg, merchantSvc)
-    order.RegisterRoutes(api.Group("/order", auth.JWTMiddleware(cfg.JWTSecret, logg, pg.Pool)), cfg, logg, orderSvc)
-    catalog.RegisterRoutes(api.Group("/catalog", auth.JWTMiddleware(cfg.JWTSecret, logg, pg.Pool)), cfg, logg, catalogSvc)
-    delivery.RegisterRoutes(api.Group("/delivery", auth.JWTMiddleware(cfg.JWTSecret, logg, pg.Pool), auth.RBACMiddleware("ADMIN")), deliverySvc)
-    payments.RegisterRoutes(api.Group("/payments", auth.JWTMiddleware(cfg.JWTSecret, logg, pg.Pool), auth.RBACMiddleware("CUSTOMER")), paymentSvc)
+	runWorker(func() { email.Run(workerContext, pg.Pool, cfg, logg) })
+	runWorker(func() { dispatch.Run(workerContext, pg.Pool, logg) })
+	runWorker(func() { finance.Run(workerContext, finance.New(pg.Pool), logg) })
+	runWorker(func() { notifications.RunPush(workerContext, pg.Pool, logg) })
+	runWorker(func() { notifications.RunSMS(workerContext, pg.Pool, logg) })
+	runWorker(func() { finance.RunMaintenance(workerContext, finance.New(pg.Pool), logg) })
 
-    // Start server with graceful shutdown
-    go func() {
-        addr := ":" + cfg.Port
-        if err := e.Start(addr); err != nil && err != http.ErrServerClosed {
-            logg.Sugar().Fatalw("server start", "error", err)
-        }
-    }()
-    logg.Sugar().Infow("Yember Core server started", "addr", ":"+cfg.Port)
+	// Register Ecosystem Persona Routes
+	customerGroup := api.Group("/customer", auth.JWTMiddleware(cfg.JWTSecret, logg, pg.Pool), auth.RBACMiddleware("CUSTOMER"))
+	riderGroup := api.Group("/rider", auth.JWTMiddleware(cfg.JWTSecret, logg, pg.Pool), auth.RBACMiddleware("DELIVERY_PARTNER"))
+	restaurantGroup := api.Group("/restaurant", auth.JWTMiddleware(cfg.JWTSecret, logg, pg.Pool), auth.RBACMiddleware("MERCHANT_OWNER"))
+	adminGroup := api.Group("/admin", auth.JWTMiddleware(cfg.JWTSecret, logg, pg.Pool), auth.RBACMiddleware("ADMIN"))
+	customer.RegisterRoutes(customerGroup, cfg, logg, customerSvc)
+	checkout.RegisterRoutes(customerGroup, checkout.New(pg.Pool))
+	partnerops.RegisterCustomerSupport(customerGroup, pg.Pool)
+	rider.RegisterCustomerProof(customerGroup, pg.Pool)
+	rider.RegisterRoutes(riderGroup, cfg, logg, riderSvc)
+	restaurant.RegisterRoutes(restaurantGroup, cfg, logg, restaurantSvc)
+	admin.RegisterRoutes(adminGroup, cfg, logg, adminSvc)
 
-    // Wait for interrupt signal
-    quit := make(chan os.Signal, 1)
-    signal.Notify(quit, os.Interrupt, syscall.SIGTERM)
-    <-quit
-    logg.Info("shutdown initiated")
+	// Legacy & Shared domain routes
+	merchant.RegisterRoutes(api.Group("/merchant", auth.JWTMiddleware(cfg.JWTSecret, logg, pg.Pool), auth.RBACMiddleware("ADMIN")), cfg, logg, merchantSvc)
+	order.RegisterRoutes(api.Group("/order", auth.JWTMiddleware(cfg.JWTSecret, logg, pg.Pool)), cfg, logg, orderSvc)
+	catalog.RegisterRoutes(api.Group("/catalog", auth.JWTMiddleware(cfg.JWTSecret, logg, pg.Pool)), cfg, logg, catalogSvc)
+	delivery.RegisterRoutes(api.Group("/delivery", auth.JWTMiddleware(cfg.JWTSecret, logg, pg.Pool), auth.RBACMiddleware("ADMIN")), deliverySvc)
+	payments.RegisterRoutes(api.Group("/payments", auth.JWTMiddleware(cfg.JWTSecret, logg, pg.Pool), auth.RBACMiddleware("CUSTOMER")), paymentSvc)
 
-    ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-    defer cancel()
-    if err := e.Shutdown(ctx); err != nil {
-        logg.Sugar().Errorw("shutdown error", "error", err)
-    }
-    logg.Info("Yember Core server gracefully stopped")
+	// Start server with graceful shutdown
+	go func() {
+		addr := ":" + cfg.Port
+		if err := e.Start(addr); err != nil && err != http.ErrServerClosed {
+			logg.Sugar().Fatalw("server start", "error", err)
+		}
+	}()
+	logg.Sugar().Infow("Yember Core server started", "addr", ":"+cfg.Port)
+
+	// Wait for interrupt signal
+	quit := make(chan os.Signal, 1)
+	signal.Notify(quit, os.Interrupt, syscall.SIGTERM)
+	<-quit
+	logg.Info("shutdown initiated")
+	stopWorkers()
+
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	if err := e.Shutdown(ctx); err != nil {
+		logg.Sugar().Errorw("shutdown error", "error", err)
+	}
+	workerDone := make(chan struct{})
+	go func() { workers.Wait(); close(workerDone) }()
+	select {
+	case <-workerDone:
+	case <-ctx.Done():
+		logg.Warn("worker shutdown deadline reached")
+	}
+	logg.Info("Yember Core server gracefully stopped")
 }
 
 func homeHandler(c echo.Context) error {
-    return c.HTML(http.StatusOK, homePageHTML)
+	return c.HTML(http.StatusOK, homePageHTML)
 }
 
 const homePageHTML = `<!doctype html>
@@ -335,14 +394,14 @@ const homePageHTML = `<!doctype html>
 </html>`
 
 func healthHandler(c echo.Context) error {
-    return c.String(http.StatusOK, "OK")
+	return c.String(http.StatusOK, "OK")
 }
 
 func readyHandler(pg *db.PostgresDB) echo.HandlerFunc {
-    return func(c echo.Context) error {
-        if err := pg.Ping(c.Request().Context()); err != nil {
-            return c.String(http.StatusServiceUnavailable, "DB not ready")
-        }
-        return c.String(http.StatusOK, "READY")
-    }
+	return func(c echo.Context) error {
+		if err := pg.Ping(c.Request().Context()); err != nil {
+			return c.String(http.StatusServiceUnavailable, "DB not ready")
+		}
+		return c.String(http.StatusOK, "READY")
+	}
 }

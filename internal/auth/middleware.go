@@ -3,6 +3,7 @@ package auth
 import (
     "net/http"
     "strings"
+"time"
 
     "github.com/jackc/pgx/v5/pgxpool"
 
@@ -33,10 +34,14 @@ func JWTMiddleware(secret string, logger *zap.Logger, pools ...*pgxpool.Pool) ec
             c.Set("role", claims.Role)
             if len(pools) > 0 {
                 var currentRole string
-                err := pools[0].QueryRow(c.Request().Context(), `SELECT role FROM public.users WHERE id=$1 AND deleted_at IS NULL AND disabled_at IS NULL`, claims.UserID).Scan(&currentRole)
+ var invalidBefore time.Time
+                err := pools[0].QueryRow(c.Request().Context(), `SELECT role,CASE WHEN tokens_invalid_before='-infinity'::timestamptz THEN '1970-01-01'::timestamptz ELSE tokens_invalid_before END FROM public.users WHERE id=$1 AND deleted_at IS NULL AND disabled_at IS NULL`, claims.UserID).Scan(&currentRole,&invalidBefore)
                 if err != nil {
                     return echo.NewHTTPError(http.StatusUnauthorized, "account is unavailable")
                 }
+                if claims.IssuedAt==nil{return echo.NewHTTPError(401,"invalid session")}
+ issued:=claims.IssuedAt.Time;if claims.IssuedMillis>0{issued=time.UnixMilli(claims.IssuedMillis)}
+ if claims.IssuedAt==nil||issued.Before(invalidBefore){return echo.NewHTTPError(401,"session revoked")}
                 c.Set("role", currentRole)
             }
             return next(c)

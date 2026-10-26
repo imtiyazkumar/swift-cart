@@ -162,7 +162,7 @@ func (r *pgRepo) Orders(ctx context.Context, status string) ([]json.RawMessage, 
 }
 
 func (r *pgRepo) Timeline(ctx context.Context, id string) ([]json.RawMessage, error) {
-    return r.jsonRows(ctx, `SELECT json_build_object('status',status,'notes',COALESCE(notes,''),'created_at',created_at) FROM orders.order_status_history WHERE order_id=$1 UNION ALL SELECT json_build_object('status','OFFER_'||status,'notes','Partner '||partner_id::text,'created_at',created_at) FROM delivery.offers WHERE order_id=$1`, id)
+    return r.jsonRows(ctx, `SELECT json_build_object('status',status,'event_type',event_type,'changed_by',changed_by,'notes',COALESCE(notes,''),'created_at',created_at) FROM orders.order_events WHERE order_id=$1 UNION ALL SELECT json_build_object('status','OFFER_'||status,'notes','Partner '||partner_id::text,'created_at',created_at) FROM delivery.offers WHERE order_id=$1`, id)
 }
 
 func (r *pgRepo) Intervene(ctx context.Context, actor, id, reason string) error {

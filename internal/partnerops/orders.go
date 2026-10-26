@@ -6,6 +6,7 @@ import (
 )
 
 func orderScope(role string) string {
+ if role=="CUSTOMER"{return `o.customer_id=$1`}
     if role == "MERCHANT_OWNER" {
         return `o.merchant_id IN(SELECT id FROM public.merchants WHERE owner_id=$1 AND deleted_at IS NULL)`
     }
@@ -44,7 +45,7 @@ func (r *Repository) Order(ctx context.Context, user, role, id string) (json.Raw
         'assignment_status',(SELECT a.status FROM delivery.delivery_assignments a JOIN delivery.delivery_partners p ON p.id=a.partner_id WHERE a.order_id=o.id AND p.user_id=$1 LIMIT 1),
         'courier',(SELECT jsonb_build_object('name',p.name,'status',a.status,'phone',CASE WHEN o.status NOT IN('DELIVERED','CANCELLED','REJECTED','REFUNDED') THEN p.phone ELSE '' END) FROM delivery.delivery_assignments a JOIN delivery.delivery_partners p ON p.id=a.partner_id WHERE a.order_id=o.id ORDER BY a.created_at DESC LIMIT 1),
         'items',COALESCE((SELECT jsonb_agg(jsonb_build_object('id',id,'name',name_snapshot,'quantity',quantity,'unit_price',unit_price,'total_price',total_price)) FROM orders.order_items WHERE order_id=o.id),'[]'::jsonb),
-        'timeline',COALESCE((SELECT jsonb_agg(jsonb_build_object('id',id,'status',status,'notes',COALESCE(notes,''),'created_at',created_at) ORDER BY created_at) FROM orders.order_status_history WHERE order_id=o.id),'[]'::jsonb))
+        'timeline',COALESCE((SELECT jsonb_agg(jsonb_build_object('id',id,'status',status,'event_type',event_type,'changed_by',changed_by,'notes',COALESCE(notes,''),'created_at',created_at) ORDER BY created_at,id) FROM orders.order_events WHERE order_id=o.id),'[]'::jsonb))
         FROM public.orders o JOIN public.merchants m ON m.id=o.merchant_id JOIN public.customers c ON c.id=o.customer_id WHERE o.id=$2 AND o.deleted_at IS NULL AND ` + orderScope(role)
     var data json.RawMessage
     err := r.pool.QueryRow(ctx, query, user, id).Scan(&data)

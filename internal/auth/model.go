@@ -2,6 +2,7 @@ package auth
 
 import (
     "context"
+ "crypto/subtle"
     "strings"
     "time"
 
@@ -101,10 +102,10 @@ func FindOrCreateByIdentifier(ctx context.Context, pool *pgxpool.Pool, identifie
     var err error
 
     if isEmail {
-        query = `SELECT id, COALESCE(email, ''), COALESCE(phone, ''), COALESCE(full_name, ''), COALESCE(gender, ''), role, created_at FROM users WHERE email=$1 AND deleted_at IS NULL`
+        query = `SELECT id, COALESCE(email, ''), COALESCE(phone, ''), COALESCE(full_name, ''), COALESCE(gender, ''), role, created_at FROM users WHERE email=$1 AND deleted_at IS NULL AND disabled_at IS NULL`
         err = pool.QueryRow(ctx, query, email).Scan(&u.ID, &u.Email, &u.Phone, &u.FullName, &u.Gender, &u.Role, &u.CreatedAt)
     } else {
-        query = `SELECT id, COALESCE(email, ''), COALESCE(phone, ''), COALESCE(full_name, ''), COALESCE(gender, ''), role, created_at FROM users WHERE phone=$1 AND deleted_at IS NULL`
+        query = `SELECT id, COALESCE(email, ''), COALESCE(phone, ''), COALESCE(full_name, ''), COALESCE(gender, ''), role, created_at FROM users WHERE phone=$1 AND deleted_at IS NULL AND disabled_at IS NULL`
         err = pool.QueryRow(ctx, query, phone).Scan(&u.ID, &u.Email, &u.Phone, &u.FullName, &u.Gender, &u.Role, &u.CreatedAt)
     }
 
@@ -151,27 +152,18 @@ func CreateOTP(ctx context.Context, pool *pgxpool.Pool, identifier, code string)
     identifier = NormalizeIdentifier(identifier)
     query := `INSERT INTO auth.otp_codes (identifier, otp_code, expires_at, is_used, created_at)
         VALUES ($1, $2, NOW() + INTERVAL '10 minutes', false, NOW())`
-    _, err := pool.Exec(ctx, query, identifier, code)
+    _, err := pool.Exec(ctx, query, identifier, otpHash(code))
     return err
 }
 
 // VerifyOTPInDB checks auth.otp_codes for an active matching code and marks it used.
-func VerifyOTPInDB(ctx context.Context, pool *pgxpool.Pool, identifier, code string) (bool, error) {
-    identifier = NormalizeIdentifier(identifier)
-    code = strings.TrimSpace(code)
-    query := `UPDATE auth.otp_codes
-        SET is_used = true
-        WHERE id = (
-            SELECT id FROM auth.otp_codes
-            WHERE (identifier = $1 OR identifier = '+' || $1 OR identifier = '+91' || $1) AND otp_code = $2 AND is_used = false AND expires_at > NOW()
-            ORDER BY created_at DESC
-            LIMIT 1
-        )
-        RETURNING id`
-    var id string
-    err := pool.QueryRow(ctx, query, identifier, code).Scan(&id)
-    if err != nil {
-        return false, nil
-    }
-    return true, nil
+func VerifyOTPInDB(ctx context.Context,pool *pgxpool.Pool,identifier,code string)(bool,error){
+ identifier=NormalizeIdentifier(identifier);code=strings.TrimSpace(code)
+ tx,err:=pool.Begin(ctx);if err!=nil{return false,err};defer tx.Rollback(ctx)
+ var id,hash string;var attempts int
+ err=tx.QueryRow(ctx,`SELECT id,otp_code,failed_attempts FROM auth.otp_codes WHERE identifier=$1 AND NOT is_used AND expires_at>now() ORDER BY created_at DESC LIMIT 1 FOR UPDATE`,identifier).Scan(&id,&hash,&attempts)
+ if err!=nil{return false,nil};if attempts>=5{return false,nil}
+ valid:=subtle.ConstantTimeCompare([]byte(hash),[]byte(otpHash(code)))==1
+ if _,err=tx.Exec(ctx,`UPDATE auth.otp_codes SET failed_attempts=failed_attempts+1,is_used=$2 WHERE id=$1`,id,valid||attempts+1>=5);err!=nil{return false,err}
+ return valid,tx.Commit(ctx)
 }

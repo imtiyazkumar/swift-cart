@@ -39,8 +39,8 @@ func (h *Hub) Subscribe(channel string) (<-chan events.Event, func()) {
 
 func (h *Hub) Publish(ctx context.Context, channel string, event events.Event) {
 	h.mu.RLock()
-	subs := append([]chan events.Event(nil), h.channels[channel]...)
-	h.mu.RUnlock()
+	defer h.mu.RUnlock()
+	subs := h.channels[channel]
 	for _, sub := range subs {
 		select {
 		case sub <- event:

@@ -26,7 +26,7 @@ func Configured(ctx context.Context, backend string) (Store, error) {
         if directory == "" {
             return nil, errors.New("private document directory is not configured")
         }
-        return Local{Directory: directory}, nil
+        return withScan(Local{Directory: directory}), nil
     case "s3":
         bucket := os.Getenv("DOCUMENT_S3_BUCKET")
         if bucket == "" {
@@ -42,7 +42,7 @@ func Configured(ctx context.Context, backend string) (Store, error) {
                 options.UsePathStyle = true
             }
         })
-        return S3{Client: client, Bucket: bucket}, nil
+        return withScan(S3{Client: client, Bucket: bucket}), nil
     default:
         return nil, errors.New("document storage backend must be local or s3")
     }

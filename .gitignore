@@ -39,3 +39,9 @@ docs/project-flow.md
 # .vscode/
 .private-documents/
 .test-cache/
+
+# Generated executables, logs and temporary files
+/yember-core-api
+*.log
+*.tmp
+*.temp

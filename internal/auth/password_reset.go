@@ -108,8 +108,8 @@ func ResetPassword(logger *zap.Logger, dbPool *pgxpool.Pool) echo.HandlerFunc {
         if err := c.Bind(&req); err != nil || strings.TrimSpace(req.Token) == "" {
             return echo.NewHTTPError(400, "reset token is required")
         }
-        if len(req.Password) < 8 {
-            return echo.NewHTTPError(400, "password must be at least 8 characters")
+        if len(req.Password) < 10 || len(req.Password)>72 {
+            return echo.NewHTTPError(400, "password must contain 10 to 72 bytes")
         }
         hash := sha256.Sum256([]byte(req.Token))
         tx, err := dbPool.Begin(c.Request().Context())
@@ -134,7 +134,7 @@ func ResetPassword(logger *zap.Logger, dbPool *pgxpool.Pool) echo.HandlerFunc {
         if err != nil {
             return echo.NewHTTPError(500, "could not reset password")
         }
-        if _, err = tx.Exec(c.Request().Context(), `UPDATE public.users SET password_hash=$1, updated_at=now() WHERE id=$2`, string(passwordHash), userID); err != nil {
+        if _, err = tx.Exec(c.Request().Context(), `UPDATE public.users SET password_hash=$1, tokens_invalid_before=date_trunc('milliseconds',clock_timestamp()), updated_at=now() WHERE id=$2`, string(passwordHash), userID); err != nil {
             logger.Error("password update failed", zap.Error(err))
             return echo.NewHTTPError(500, "could not reset password")
         }

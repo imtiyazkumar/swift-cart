@@ -9,7 +9,7 @@
 
 To apply one repair migration to an existing database without replaying the full migration directory, run from `yember-core`: `go run ./cmd/migrate -file 019_ensure_order_delivery_address.sql`.
 
-To enable password recovery, configure `SMTP_HOST`, `SMTP_PORT`, `SMTP_USERNAME`, `SMTP_PASSWORD`, and `SMTP_FROM`. Set `PASSWORD_RESET_URL` to the app deep link (`yember://auth/reset-password` by default). Email delivery is unavailable until SMTP is configured.
+To enable password recovery, configure `EMAIL_DELIVERY_ENABLED=true`, `RESEND_API_KEY` and a verified `EMAIL_FROM`. Set `PASSWORD_RESET_URL` to the app deep link (`yember://auth/reset-password` by default). Legacy SMTP fields are not the current queued transactional-email transport. Phone OTP uses TextBee; see [central finance deployment](financial-system.md) for messaging, MFA, banking, scanning and live-activation configuration.
 
 ## Docker Compose
 

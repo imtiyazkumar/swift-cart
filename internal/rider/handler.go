@@ -126,11 +126,13 @@ func RegisterRoutes(g *echo.Group, cfg *config.Config, logg *zap.Logger, svc *Se
         var req struct {
             PartnerID string `json:"partner_id"`
             Status    string `json:"status"`
+ Code string `json:"delivery_code"`
+ CashCollected bool `json:"cash_collected"`
         }
         if err := c.Bind(&req); err != nil {
             return echo.NewHTTPError(http.StatusBadRequest, "invalid request body")
         }
-        if err := svc.UpdateJobStatus(c.Request().Context(), c.Get("partnerID").(string), orderID, req.Status); err != nil {
+        if err := svc.UpdateJobStatus(WithCompletion(c.Request().Context(),req.Code,req.CashCollected), c.Get("partnerID").(string), orderID, req.Status); err != nil {
             return echo.NewHTTPError(http.StatusBadRequest, err.Error())
         }
         return c.JSON(http.StatusOK, map[string]string{"message": "delivery status updated", "status": req.Status})

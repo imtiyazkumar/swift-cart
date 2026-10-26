@@ -3,6 +3,7 @@ package fees
 import (
     "github.com/imtiyazkumar/yember-core/config"
     "github.com/imtiyazkumar/yember-core/internal/auth"
+"github.com/imtiyazkumar/yember-core/internal/finance"
     "github.com/jackc/pgx/v5/pgxpool"
     "github.com/labstack/echo/v4"
     "go.uber.org/zap"
@@ -33,6 +34,7 @@ func Register(api *echo.Group, pool *pgxpool.Pool, cfg *config.Config, log *zap.
         return c.JSON(200, policy)
     })
     api.POST("/restaurant/onboarding-payment", func(c echo.Context) error {
+        if os.Getenv("ONBOARDING_PAYMENT_PROVIDER")=="RAZORPAY"{result,err:=finance.New(pool).OnboardingCheckout(c.Request().Context(),c.Get("userID").(string));if err!=nil{return echo.NewHTTPError(409,err.Error())};return c.JSON(200,result)}
         checkout, err := service.CreateCheckout(c.Request().Context(), c.Get("userID").(string))
         if err != nil {
             return echo.NewHTTPError(503, err.Error())

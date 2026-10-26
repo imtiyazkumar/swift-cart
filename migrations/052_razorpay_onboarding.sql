@@ -1,0 +1,4 @@
+CREATE TABLE finance.onboarding_attempts(id uuid PRIMARY KEY DEFAULT gen_random_uuid(),merchant_id uuid NOT NULL REFERENCES public.merchants(id),user_id uuid NOT NULL REFERENCES public.users(id),amount bigint NOT NULL CHECK(amount>0),currency char(3) NOT NULL,status text NOT NULL DEFAULT 'CREATING' CHECK(status IN ('CREATING','PENDING','PAID','EXPIRED')),provider_id text UNIQUE,payment_reference text UNIQUE,checkout_url text,expires_at timestamptz,created_at timestamptz NOT NULL DEFAULT now());
+CREATE UNIQUE INDEX one_onboarding_paid ON finance.onboarding_attempts(merchant_id) WHERE status='PAID';
+ALTER TABLE finance.entries DROP CONSTRAINT entries_account_check;
+ALTER TABLE finance.entries ADD CONSTRAINT entries_account_check CHECK(account IN ('CASH','UNEARNED','PARTNER_PAYABLE','COMMISSION','DELIVERY_REVENUE','TAX_PAYABLE','GATEWAY_FEE','REFUND_EXPENSE','ADJUSTMENT','PAYOUT_CLEARING','PROMOTION_EXPENSE','ONBOARDING_REVENUE'));
