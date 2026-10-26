@@ -71,7 +71,7 @@ func registerConsole(g *echo.Group, svc *Service, cfg *config.Config) {
         limit, _ := strconv.Atoi(c.QueryParam("limit"))
         result, err := repo.ConsoleList(c.Request().Context(), c.Param("resource"), ListFilter{StationID: c.QueryParam("station_id"), Search: c.QueryParam("q"), Status: c.QueryParam("status"), Role: c.QueryParam("role"), Page: page, Limit: limit})
         if err != nil {
-            return echo.NewHTTPError(500, "could not load records")
+            return echo.NewHTTPError(500, "could not load records").SetInternal(err)
         }
         return c.JSON(200, result)
     })
@@ -81,7 +81,7 @@ func registerConsole(g *echo.Group, svc *Service, cfg *config.Config) {
             if errors.Is(err, pgx.ErrNoRows) {
                 return echo.NewHTTPError(404, "record not found")
             }
-            return echo.NewHTTPError(500, "could not load record")
+            return echo.NewHTTPError(500, "could not load record").SetInternal(err)
         }
         return c.JSON(200, result)
     })

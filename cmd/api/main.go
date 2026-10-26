@@ -113,7 +113,7 @@ func main() {
 	// Global Middleware
 	e.Use(middleware.Recover())
 	e.Use(middleware.BodyLimit("12M"))
-	e.Use(middleware.RequestID())
+	e.Use(custommiddleware.RequestID())
 	e.Use(middleware.CORSWithConfig(middleware.CORSConfig{
 		AllowOrigins:     strings.Split(cfg.CORSAllowedOrigins, ","),
 		AllowMethods:     []string{http.MethodGet, http.MethodPost, http.MethodPut, http.MethodPatch, http.MethodDelete, http.MethodOptions},
