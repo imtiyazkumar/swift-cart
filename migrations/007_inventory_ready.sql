@@ -1,2 +1,0 @@
--- Removed unused warehouse inventory tables (not needed for Yember Food Delivery)
--- Food availability is managed via is_available flag on catalog.items

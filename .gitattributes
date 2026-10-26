@@ -1,0 +1,3 @@
+# Preserve historical migration SQL bytes and checksums across platforms.
+migrations/*.sql -text
+migrations/manifest.json text eol=lf

@@ -1,1 +1,0 @@
--- Removed duplicate auth migration (handled by 001_init.sql)

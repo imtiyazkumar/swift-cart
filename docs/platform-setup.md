@@ -38,7 +38,9 @@ that block npm scripts should use `npm.cmd` and `npx.cmd`.
    The runner refuses to replay history automatically. Only if migrations through
    020 are already represented in that schema, use:
    `go run ./cmd/migrate --baseline-through 020_refresh_seed_food_image_urls.sql`.
-   This records checksums through that file and applies later migrations. Do not
+   The filename is a historical identity in `migrations/manifest.json`; its SQL
+   now lives in domain files. This records checksums through that identity and
+   applies later migrations. Do not
    baseline a partially migrated schema. Applied files are checksum-verified on
    later runs. Each migration and its ledger insert commit together under a lock.
 4. Provision the first administrator using process-only `ADMIN_EMAIL` and

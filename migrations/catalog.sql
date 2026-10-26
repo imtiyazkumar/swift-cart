@@ -1,3 +1,106 @@
+-- Domain: catalog
+-- Applied through cmd/migrate using manifest.json; do not execute this file directly.
+-- yember-step: 006_domain_schemas.sql/003
+
+CREATE SCHEMA IF NOT EXISTS catalog;
+-- yember-end-step
+-- yember-step: 006_domain_schemas.sql/016
+
+
+CREATE TABLE IF NOT EXISTS catalog.categories (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    merchant_id UUID NOT NULL REFERENCES public.merchants(id) ON DELETE CASCADE,
+    name TEXT NOT NULL,
+    sort_order INTEGER NOT NULL DEFAULT 0,
+    is_active BOOLEAN NOT NULL DEFAULT true,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    deleted_at TIMESTAMPTZ,
+    UNIQUE(merchant_id, name)
+);
+-- yember-end-step
+-- yember-step: 006_domain_schemas.sql/017
+
+
+CREATE TABLE IF NOT EXISTS catalog.items (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    merchant_id UUID NOT NULL REFERENCES merchants(id) ON DELETE CASCADE,
+    category_id UUID NOT NULL REFERENCES catalog.categories(id) ON DELETE RESTRICT,
+    name TEXT NOT NULL,
+    description TEXT NOT NULL DEFAULT '',
+    item_type TEXT NOT NULL DEFAULT 'STANDARD',
+    is_vegetarian BOOLEAN,
+    base_price BIGINT NOT NULL CHECK (base_price >= 0),
+    currency CHAR(3) NOT NULL DEFAULT 'INR',
+    is_available BOOLEAN NOT NULL DEFAULT true,
+    inventory_tracked BOOLEAN NOT NULL DEFAULT false,
+    substitution_policy TEXT NOT NULL DEFAULT 'NONE',
+    metadata JSONB NOT NULL DEFAULT '{}',
+    created_by UUID REFERENCES public.users(id),
+    updated_by UUID REFERENCES public.users(id),
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    deleted_at TIMESTAMPTZ
+);
+-- yember-end-step
+-- yember-step: 006_domain_schemas.sql/018
+
+
+CREATE TABLE IF NOT EXISTS catalog.item_variants (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    item_id UUID NOT NULL REFERENCES catalog.items(id) ON DELETE CASCADE,
+    name TEXT NOT NULL,
+    price BIGINT NOT NULL CHECK (price >= 0),
+    sku TEXT,
+    is_active BOOLEAN NOT NULL DEFAULT true,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+-- yember-end-step
+-- yember-step: 006_domain_schemas.sql/019
+
+
+CREATE TABLE IF NOT EXISTS catalog.modifiers (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    merchant_id UUID NOT NULL REFERENCES public.merchants(id) ON DELETE CASCADE,
+    name TEXT NOT NULL,
+    min_select INTEGER NOT NULL DEFAULT 0,
+    max_select INTEGER NOT NULL DEFAULT 1,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+-- yember-end-step
+-- yember-step: 006_domain_schemas.sql/020
+
+
+CREATE TABLE IF NOT EXISTS catalog.addons (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    modifier_id UUID NOT NULL REFERENCES catalog.modifiers(id) ON DELETE CASCADE,
+    name TEXT NOT NULL,
+    price BIGINT NOT NULL DEFAULT 0 CHECK (price >= 0),
+    is_active BOOLEAN NOT NULL DEFAULT true
+);
+-- yember-end-step
+-- yember-step: 006_domain_schemas.sql/035
+
+
+CREATE INDEX IF NOT EXISTS idx_catalog_items_merchant ON catalog.items(merchant_id) WHERE deleted_at IS NULL;
+-- yember-end-step
+-- yember-step: 006_domain_schemas.sql/036
+
+CREATE INDEX IF NOT EXISTS idx_catalog_items_search ON catalog.items USING gin (to_tsvector('simple', name || ' ' || description));
+-- yember-end-step
+-- yember-step: 007_inventory_ready.sql/001
+-- Removed unused warehouse inventory tables (not needed for Yember Food Delivery)
+-- Food availability is managed via is_available flag on catalog.items
+
+-- yember-end-step
+-- yember-step: 009_multi_app_ecosystem.sql/001
+-- Migration 009: Multi-App Ecosystem Extensions
+
+-- Drop unused inventory schema if present
+DROP SCHEMA IF EXISTS inventory CASCADE;
+-- yember-end-step
+-- yember-step: 010_seed_data.sql/001
 -- Migration 010: Complete Seed Data for Yember Food Delivery Ecosystem
 
 -- Seed Coupons
@@ -6,6 +109,9 @@ VALUES
     ('VALLEY20', '20% off on authentic Kashmiri cuisine orders', 'PERCENTAGE', 20, 300, true),
     ('YEMBER50', 'Flat ₹50 off on orders above ₹249', 'FLAT', 50, 249, true)
 ON CONFLICT (code) DO NOTHING;
+-- yember-end-step
+-- yember-step: 010_seed_data.sql/002
+
 
 -- Seed Demo Users & Full Restaurant Catalogs
 DO $$
@@ -171,3 +277,73 @@ BEGIN
     VALUES (v_partner_id, 34.0730, 74.8115);
 
 END $$;
+
+-- yember-end-step
+-- yember-step: 016_seed_menu_image_urls.sql/001
+-- Add externally hosted demo food photography to the seeded menu catalog.
+-- URLs are stored in item metadata so they can later be replaced with owned assets.
+WITH food_images(name, image_url) AS (
+    VALUES
+        ('Rista', 'https://images.slurrp.com/prodarticles/gi4jd8e9qu7.webp?impolicy=slurrp-20210601&width=1200&height=900&q=75'),
+        ('Gushtaba', 'https://images.hindustantimes.com/rf/image_size_960x540/HT/p2/2020/10/02/Pictures/_b7015fae-04c5-11eb-b559-b799cd4220ef.jpg'),
+        ('Tabak Maaz', 'https://static.toiimg.com/photo/https%3A/static.toiimg.com/thumb/msid-86371118%2Cwidth-1280%2Cheight-720%2Cimgsize-28964%2Cresizemode-6%2Coverlay-toi_sw%2Cpt-32%2Cy_pad-600/photo.jpg'),
+        ('Rogan Josh', 'https://etoiledukashmir.fr/images/posts/rogan-josh.webp'),
+        ('Aab Gosht', 'https://media-assets.swiggy.com/swiggy/image/upload/fl_lossy%2Cf_auto%2Cq_auto%2Cw_300%2Ch_300%2Cc_fit/FOOD_CATALOG/IMAGES/CMS/2026/2/15/64053737-3743-4e3e-aa0b-194138d45700_4c7327d2-4e70-40a5-ad1d-6204091bea14.png_compressed'),
+        ('Kashmiri Kahwa', 'https://kashmirinaturals.com/cdn/shop/articles/KASHMIRI_KAHWA_2_f38c346d-3bac-4181-b3a8-32bb41d0b199.jpg?v=1761751603'),
+        ('Phirni', 'https://verygoodrecipes.com/images/blogs/my-tryst-with-food-and-travel/kashmiri-phirni-recipe-diwali-sweet-happy-diwali.640x480.jpg'),
+        ('Mutton Seekh Kebab', 'https://images.unsplash.com/photo-1599487488170-d11ec9c172f0?auto=format&fit=crop&w=900&q=80'),
+        ('Kashmiri Mutton Biryani', 'https://images.unsplash.com/photo-1589302168068-964664d93dc0?auto=format&fit=crop&w=900&q=80'),
+        ('Chicken Kanti', 'https://media-assets.swiggy.com/swiggy/image/upload/fl_lossy%2Cf_auto%2Cq_auto%2Cw_400/RX_THUMBNAIL/IMAGES/VENDOR/2024/5/18/c4ff5e57-f639-49f2-9c15-27a65ac1e373_771622.jpg'),
+        ('Tandoori Chicken Full', 'https://media-assets.swiggy.com/swiggy/image/upload/fl_lossy%2Cf_auto%2Cq_auto%2Cw_400/RX_THUMBNAIL/IMAGES/VENDOR/2024/5/18/c4ff5e57-f639-49f2-9c15-27a65ac1e373_771622.jpg'),
+        ('Mutton Kanti', 'https://images.unsplash.com/photo-1599487488170-d11ec9c172f0?auto=format&fit=crop&w=900&q=80'),
+        ('Steamed Mutton Momos', 'https://media-assets.swiggy.com/swiggy/image/upload/fl_lossy%2Cf_auto%2Cq_auto/13f92c7bedcb61ffd1483f97196abf3a'),
+        ('Fried Chicken Momos', 'https://www.swagatam.site/uploads/momo1.jpg'),
+        ('Thukpa Noodle Soup', 'https://images.unsplash.com/photo-1569718212165-3a8278d5f624?auto=format&fit=crop&w=900&q=80'),
+        ('Chicken Chilli Gravy', 'https://images.unsplash.com/photo-1603894584373-5ac82b2ae398?auto=format&fit=crop&w=900&q=80'),
+        ('Veg Hakka Noodles', 'https://images.unsplash.com/photo-1512058564366-18510be2db19?auto=format&fit=crop&w=900&q=80'),
+        ('Noon Chai (Pink Tea)', 'https://www.kashmiribazaar.in/image/cache/catalog/pictures/products/Tea/noon-chai-500x445.jpg'),
+        ('Kashmiri Shirmal & Bakarkhani', 'https://cdn.arabsstock.com/uploads/images/279595/bakeries-and-ovens-in-the-thumbnail-279595.webp'),
+        ('Girda Chicken Club Sandwich', 'https://images.unsplash.com/photo-1528735602780-2552fd46c7af?auto=format&fit=crop&w=900&q=80'),
+        ('Cardamom Cappuccino', 'https://images.unsplash.com/photo-1570968915860-54d5c301fa9f?auto=format&fit=crop&w=900&q=80'),
+        ('Walnut Fudge Brownie', 'https://www.ngy.co.id/wp-content/uploads/2024/11/Resep-Fudgy-Brownies-yang-Nyoklat-dan-Lumer-di-Mulut.jpg'),
+        ('Woodfired Margherita', 'https://images.unsplash.com/photo-1664309641932-0e03e0771b97?auto=format&fit=crop&w=900&q=80'),
+        ('Chicken Tikka Feast Pizza', 'https://images.unsplash.com/photo-1664309641932-0e03e0771b97?auto=format&fit=crop&w=900&q=80'),
+        ('Spicy Jalapeno & Corn Pizza', 'https://images.unsplash.com/photo-1664309641932-0e03e0771b97?auto=format&fit=crop&w=900&q=80'),
+        ('Garlic Cheese Breadsticks', 'https://images.unsplash.com/photo-1571407970349-bc81e7e96d47?auto=format&fit=crop&w=900&q=80'),
+        ('Classic Cold Coffee Shake', 'https://images.unsplash.com/photo-1570968915860-54d5c301fa9f?auto=format&fit=crop&w=900&q=80'),
+        ('Kashmiri Dum Aloo', 'https://images.unsplash.com/photo-1565557623262-b51c2513a641?auto=format&fit=crop&w=900&q=80'),
+        ('Nadir Monji', 'https://images.unsplash.com/photo-1601050690597-df0568f70950?auto=format&fit=crop&w=900&q=80'),
+        ('Paneer Chaman', 'https://images.unsplash.com/photo-1603894584373-5ac82b2ae398?auto=format&fit=crop&w=900&q=80'),
+        ('Haakh Saag', 'https://images.unsplash.com/photo-1547592180-85f173990554?auto=format&fit=crop&w=900&q=80'),
+        ('Dal Lake Special Veg Thali', 'https://b.zmtcdn.com/data/pictures/5/19179345/0c6edff360de0a07017370f52559565f_featured_v2.jpg')
+)
+UPDATE catalog.items AS item
+SET metadata = COALESCE(item.metadata, '{}'::jsonb) || jsonb_build_object('image_url', food_images.image_url),
+    updated_at = now()
+FROM food_images
+WHERE lower(item.name) = lower(food_images.name)
+  AND item.deleted_at IS NULL;
+
+-- yember-end-step
+-- yember-step: 020_refresh_seed_food_image_urls.sql/001
+-- Refresh a few source-specific food photos for the existing demo catalog.
+-- These updates are idempotent and leave customer/order data untouched.
+WITH food_images(name, image_url, credit, credit_url) AS (
+    VALUES
+        ('Rista', 'https://images.slurrp.com/prodarticles/gi4jd8e9qu7.webp?impolicy=slurrp-20210601&width=1200&height=900&q=75', NULL::TEXT, NULL::TEXT),
+        ('Rogan Josh', 'https://upload.wikimedia.org/wikipedia/commons/6/67/Rogan_Josh_Kashmiri.jpg', 'Spice Eats via Wikimedia Commons, CC BY 3.0', 'https://commons.wikimedia.org/wiki/File:Rogan_Josh_Kashmiri.jpg'),
+        ('Steamed Mutton Momos', 'https://images.unsplash.com/photo-1655648316042-1a863d182d29?auto=format&fit=crop&fm=jpg&q=80&w=900', 'Sukanya Basu via Unsplash', 'https://unsplash.com/photos/a-bowl-of-soup-4HEuiIwQ0K4'),
+        ('Fried Chicken Momos', 'https://images.unsplash.com/photo-1655648316042-1a863d182d29?auto=format&fit=crop&fm=jpg&q=80&w=900', 'Sukanya Basu via Unsplash', 'https://unsplash.com/photos/a-bowl-of-soup-4HEuiIwQ0K4')
+)
+UPDATE catalog.items AS item
+SET metadata = COALESCE(item.metadata, '{}'::jsonb) || jsonb_strip_nulls(jsonb_build_object(
+        'image_url', food_images.image_url,
+        'image_credit', food_images.credit,
+        'image_credit_url', food_images.credit_url
+    )),
+    updated_at = now()
+FROM food_images
+WHERE lower(item.name) = lower(food_images.name)
+  AND item.deleted_at IS NULL;
+
+-- yember-end-step

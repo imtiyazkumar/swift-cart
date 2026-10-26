@@ -3,6 +3,7 @@ package db
 import (
 	"context"
 	"fmt"
+
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
@@ -20,7 +21,7 @@ func CheckSchema(ctx context.Context, pool *pgxpool.Pool) error {
  SELECT provider_reference,status FROM notifications.sms_outbox LIMIT 0;
  SELECT sent_at,resend_count FROM delivery.completion_challenges LIMIT 0;`
 	if _, err := pool.Exec(ctx, checks); err != nil {
-		return fmt.Errorf("database schema is not ready: run 'go run ./cmd/migrate' from yember-core (required through 053_delivery_code_recovery.sql): %w", err)
+		return fmt.Errorf("database schema is not ready: run 'go run ./cmd/migrate' from yember-core (apply the complete domain migration manifest): %w", err)
 	}
 	return nil
 }

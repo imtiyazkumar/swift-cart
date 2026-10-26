@@ -1,0 +1,877 @@
+{
+  "version": 1,
+  "domains": [
+    "auth.sql",
+    "customer.sql",
+    "rider.sql",
+    "restaurant.sql",
+    "admin.sql",
+    "catalog.sql",
+    "order.sql",
+    "delivery.sql",
+    "payments.sql",
+    "notification.sql",
+    "realtime.sql"
+  ],
+  "migrations": [
+    {
+      "filename": "001_init.sql",
+      "checksum": "4e9dedf70409f11a21f44dd559d076cd3e4eea596b7526e0f2384f517daac90d",
+      "demo": false,
+      "steps": [
+        "001_init.sql/001",
+        "001_init.sql/002",
+        "001_init.sql/003"
+      ],
+      "legacy_checksums": [
+        "6d6f243c5630163938de050fd55ddcf806337aec2d5dda5b9da316732d6630e1"
+      ]
+    },
+    {
+      "filename": "002_auth_tokens.sql",
+      "checksum": "f28314f899bf6b5572f4de89b2f99e3964183f018e1af0c26b38ba39df3d39ca",
+      "demo": false,
+      "steps": [
+        "002_auth_tokens.sql/001",
+        "002_auth_tokens.sql/002",
+        "002_auth_tokens.sql/003"
+      ],
+      "legacy_checksums": [
+        "ee33fbdad562fd90c3efaac7a82069a7a7b0341dc108d0840499b0df39a9ce4d"
+      ]
+    },
+    {
+      "filename": "003_customers.sql",
+      "checksum": "02ee515b7ed1c0588f94ece746e1e10769f0f34aed3cf13ce376a8bdad68c0f7",
+      "demo": false,
+      "steps": [
+        "003_customers.sql/001"
+      ],
+      "legacy_checksums": [
+        "3cea9f3b3976be62c6e8066126a2c39f6c5f6ac303bf732bc2febf57d083a253"
+      ]
+    },
+    {
+      "filename": "004_merchants.sql",
+      "checksum": "f855c2275d817ec05880265327f8bdd3577c6c7f18b1814d6fcc106b6d1fde06",
+      "demo": false,
+      "steps": [
+        "004_merchants.sql/001"
+      ],
+      "legacy_checksums": [
+        "4b02a68335966c49658ce537cc47638aef5b093c6d88d2a7c705b8175c5fb8aa"
+      ]
+    },
+    {
+      "filename": "005_orders.sql",
+      "checksum": "bccbf959ada528170a9421ac19e492d79d5db21ad032f2b1d4de90c9889b1ae4",
+      "demo": false,
+      "steps": [
+        "005_orders.sql/001"
+      ],
+      "legacy_checksums": [
+        "566cd76dfdb1cb2b61392acd010c2e0728dd94b1da80083d9eaa8c0e9bda3567"
+      ]
+    },
+    {
+      "filename": "006_domain_schemas.sql",
+      "checksum": "0c5a07502693fc85f9313616dc15f8b3aaa2e40beb3712c4980aa564fb0d1456",
+      "demo": false,
+      "steps": [
+        "006_domain_schemas.sql/001",
+        "006_domain_schemas.sql/002",
+        "006_domain_schemas.sql/003",
+        "006_domain_schemas.sql/004",
+        "006_domain_schemas.sql/005",
+        "006_domain_schemas.sql/006",
+        "006_domain_schemas.sql/007",
+        "006_domain_schemas.sql/008",
+        "006_domain_schemas.sql/009",
+        "006_domain_schemas.sql/010",
+        "006_domain_schemas.sql/011",
+        "006_domain_schemas.sql/012",
+        "006_domain_schemas.sql/013",
+        "006_domain_schemas.sql/014",
+        "006_domain_schemas.sql/015",
+        "006_domain_schemas.sql/016",
+        "006_domain_schemas.sql/017",
+        "006_domain_schemas.sql/018",
+        "006_domain_schemas.sql/019",
+        "006_domain_schemas.sql/020",
+        "006_domain_schemas.sql/021",
+        "006_domain_schemas.sql/022",
+        "006_domain_schemas.sql/023",
+        "006_domain_schemas.sql/024",
+        "006_domain_schemas.sql/025",
+        "006_domain_schemas.sql/026",
+        "006_domain_schemas.sql/027",
+        "006_domain_schemas.sql/028",
+        "006_domain_schemas.sql/029",
+        "006_domain_schemas.sql/030",
+        "006_domain_schemas.sql/031",
+        "006_domain_schemas.sql/032",
+        "006_domain_schemas.sql/033",
+        "006_domain_schemas.sql/034",
+        "006_domain_schemas.sql/035",
+        "006_domain_schemas.sql/036",
+        "006_domain_schemas.sql/037",
+        "006_domain_schemas.sql/038",
+        "006_domain_schemas.sql/039",
+        "006_domain_schemas.sql/040"
+      ],
+      "legacy_checksums": [
+        "7dc895bd8798eeae2df6cf8e905dc6b71f7f89e816593a5c6ab5595950460e98"
+      ]
+    },
+    {
+      "filename": "007_inventory_ready.sql",
+      "checksum": "2b751bcac4d73544afccfd8015754b4cf5f2ff3c350fe7986c0e18ce6a92182a",
+      "demo": false,
+      "steps": [
+        "007_inventory_ready.sql/001"
+      ],
+      "legacy_checksums": [
+        "bdc4a774c61af01def11db30ff69365aea82739d1ce1a33e3b06e621cfaa2228"
+      ]
+    },
+    {
+      "filename": "008_public_core_enrichment.sql",
+      "checksum": "01c5bd85fdd8beb19e661d81a90e9f41ebab0c73ab13219cfb4ee6ebeb683829",
+      "demo": false,
+      "steps": [
+        "008_public_core_enrichment.sql/001",
+        "008_public_core_enrichment.sql/002",
+        "008_public_core_enrichment.sql/003",
+        "008_public_core_enrichment.sql/004",
+        "008_public_core_enrichment.sql/005",
+        "008_public_core_enrichment.sql/006",
+        "008_public_core_enrichment.sql/007",
+        "008_public_core_enrichment.sql/008"
+      ],
+      "legacy_checksums": [
+        "420bda5701df720e44e81864cd995ad33e3e100b189217f635c4454485e4d3f1"
+      ]
+    },
+    {
+      "filename": "009_multi_app_ecosystem.sql",
+      "checksum": "1bd5eaff3ebb79cf8bbcf04b2dd7b757510d545cd1877610457dccfc89652e72",
+      "demo": false,
+      "steps": [
+        "009_multi_app_ecosystem.sql/001",
+        "009_multi_app_ecosystem.sql/002",
+        "009_multi_app_ecosystem.sql/003",
+        "009_multi_app_ecosystem.sql/004",
+        "009_multi_app_ecosystem.sql/005",
+        "009_multi_app_ecosystem.sql/006",
+        "009_multi_app_ecosystem.sql/007",
+        "009_multi_app_ecosystem.sql/008",
+        "009_multi_app_ecosystem.sql/009",
+        "009_multi_app_ecosystem.sql/010",
+        "009_multi_app_ecosystem.sql/011",
+        "009_multi_app_ecosystem.sql/012",
+        "009_multi_app_ecosystem.sql/013"
+      ],
+      "legacy_checksums": [
+        "3188b4163f2d7f0b4383dc4a7e151a2fc0bc017b999d06e676e1adf24138483d"
+      ]
+    },
+    {
+      "filename": "010_seed_data.sql",
+      "checksum": "e2a7b3961b53687cc45041c3e1e1092f01401bd18f333a4d042caf8ef5be1c70",
+      "demo": true,
+      "steps": [
+        "010_seed_data.sql/001",
+        "010_seed_data.sql/002"
+      ],
+      "legacy_checksums": [
+        "9f835e34c524801668859c0e17d6bcc94176532436a7b361a0810eac28414b08"
+      ]
+    },
+    {
+      "filename": "011_otp_codes.sql",
+      "checksum": "84b142aaea46fa25c269648fd79d568a2aa28a1f6e71202b2b0398da3acd82d9",
+      "demo": false,
+      "steps": [
+        "011_otp_codes.sql/001",
+        "011_otp_codes.sql/002"
+      ],
+      "legacy_checksums": [
+        "28882bf6509e925103baa5b8093bc9c3a97d3297030f05053f7900befab6d4b5"
+      ]
+    },
+    {
+      "filename": "012_nullable_email_and_phone.sql",
+      "checksum": "2cf0b98d1f1d5a84baa1d200207085a1d0345013248066e2a635c800b0d097ac",
+      "demo": false,
+      "steps": [
+        "012_nullable_email_and_phone.sql/001",
+        "012_nullable_email_and_phone.sql/002",
+        "012_nullable_email_and_phone.sql/003",
+        "012_nullable_email_and_phone.sql/004",
+        "012_nullable_email_and_phone.sql/005",
+        "012_nullable_email_and_phone.sql/006"
+      ],
+      "legacy_checksums": [
+        "22acc02bd097dfe8d2f284c15fa8d9ae821ac193f65921736d5ab72cffbee986"
+      ]
+    },
+    {
+      "filename": "013_add_gender_and_profile.sql",
+      "checksum": "0be93aac7ce82b964ddfa3f7fecfec02420d4bfce3d165659eb5a0cace415286",
+      "demo": false,
+      "steps": [
+        "013_add_gender_and_profile.sql/001",
+        "013_add_gender_and_profile.sql/002"
+      ],
+      "legacy_checksums": [
+        "43110f19aa830763344c6170958eede9b286f615d346cbe22b2cee5f79fe01ad"
+      ]
+    },
+    {
+      "filename": "014_enforce_unique_email_and_phone.sql",
+      "checksum": "ee1f87e71ff6fffa70afb02fe8850bfd8dffd2f141a026c1cc01a522451d6c43",
+      "demo": false,
+      "steps": [
+        "014_enforce_unique_email_and_phone.sql/001",
+        "014_enforce_unique_email_and_phone.sql/002",
+        "014_enforce_unique_email_and_phone.sql/003",
+        "014_enforce_unique_email_and_phone.sql/004",
+        "014_enforce_unique_email_and_phone.sql/005",
+        "014_enforce_unique_email_and_phone.sql/006",
+        "014_enforce_unique_email_and_phone.sql/007",
+        "014_enforce_unique_email_and_phone.sql/008",
+        "014_enforce_unique_email_and_phone.sql/009",
+        "014_enforce_unique_email_and_phone.sql/010",
+        "014_enforce_unique_email_and_phone.sql/011",
+        "014_enforce_unique_email_and_phone.sql/012",
+        "014_enforce_unique_email_and_phone.sql/013",
+        "014_enforce_unique_email_and_phone.sql/014"
+      ],
+      "legacy_checksums": [
+        "7dff48e820e6cf4a1c5b88a0a2905ee7937f59cb84507167ffc0dccbc5c7d418"
+      ]
+    },
+    {
+      "filename": "015_customer_checkout.sql",
+      "checksum": "f2b6eb45b3181ead19954bc8853c5a873f1d8ce7463957c9a3c7fc1851974d28",
+      "demo": false,
+      "steps": [
+        "015_customer_checkout.sql/001",
+        "015_customer_checkout.sql/002",
+        "015_customer_checkout.sql/003",
+        "015_customer_checkout.sql/004",
+        "015_customer_checkout.sql/005",
+        "015_customer_checkout.sql/006"
+      ],
+      "legacy_checksums": [
+        "c115bbc33a94971e177478e4d99516717848bd2068ebce3aa079e5d348e2a847"
+      ]
+    },
+    {
+      "filename": "016_seed_menu_image_urls.sql",
+      "checksum": "824f4d87ffc916409cfed0af51a1a8d799231578606a211536603df2f9893eab",
+      "demo": false,
+      "steps": [
+        "016_seed_menu_image_urls.sql/001"
+      ],
+      "legacy_checksums": [
+        "cc455ffd082d9861b101f62d7d5ab3af6650fdc59a5634c9e638e09b2e38ac44"
+      ]
+    },
+    {
+      "filename": "017_password_reset_tokens.sql",
+      "checksum": "abd511d045f9771b1fb02bfc1d70921a7ea5cc281f4212cd10f7cec109b7cc2a",
+      "demo": false,
+      "steps": [
+        "017_password_reset_tokens.sql/001",
+        "017_password_reset_tokens.sql/002"
+      ],
+      "legacy_checksums": [
+        "f1b890bb12122befa9c2f56bf985cc0d273f90158d4c3187de3d34c38cca444b"
+      ]
+    },
+    {
+      "filename": "018_repair_cart_item_conflict_index.sql",
+      "checksum": "853276a23cbcb0c79b6da3598c07674319d21ad503a7b9beea32ceb1e96e7afb",
+      "demo": false,
+      "steps": [
+        "018_repair_cart_item_conflict_index.sql/001",
+        "018_repair_cart_item_conflict_index.sql/002",
+        "018_repair_cart_item_conflict_index.sql/003"
+      ],
+      "legacy_checksums": [
+        "5309df4fb165934ea564f224b9b0279dd7b01726f0b27732ae92e36e093ca588"
+      ]
+    },
+    {
+      "filename": "019_ensure_order_delivery_address.sql",
+      "checksum": "21c9879cb3673c350a55c890ca7f78b9a06be9d94471637d9f43e2adb50ebd89",
+      "demo": false,
+      "steps": [
+        "019_ensure_order_delivery_address.sql/001"
+      ],
+      "legacy_checksums": [
+        "8f094db5dfce2e7babd4dd72a9dc0759dc019837230f3bc2f96fd2482c8647da"
+      ]
+    },
+    {
+      "filename": "020_refresh_seed_food_image_urls.sql",
+      "checksum": "2715593b03d064e1a9731e6600c6dad235c887f7798c61f8f10ba5eda5f240ab",
+      "demo": false,
+      "steps": [
+        "020_refresh_seed_food_image_urls.sql/001"
+      ],
+      "legacy_checksums": [
+        "0a57a0e0c8b700b80b13f79dfdbf84be5991d718b706b9d2bd986eb546156b9f"
+      ]
+    },
+    {
+      "filename": "021_platform_operations.sql",
+      "checksum": "2e77d1646e6935e19c878401676ae02862da58dffab7e5bceef7e468682881b7",
+      "demo": false,
+      "steps": [
+        "021_platform_operations.sql/001",
+        "021_platform_operations.sql/002",
+        "021_platform_operations.sql/003",
+        "021_platform_operations.sql/004",
+        "021_platform_operations.sql/005",
+        "021_platform_operations.sql/006",
+        "021_platform_operations.sql/007",
+        "021_platform_operations.sql/008",
+        "021_platform_operations.sql/009",
+        "021_platform_operations.sql/010",
+        "021_platform_operations.sql/011",
+        "021_platform_operations.sql/012"
+      ],
+      "legacy_checksums": [
+        "a77733b692db2f27f3be1cb99bae368f5be345aef2727d510847c83804802fbf"
+      ]
+    },
+    {
+      "filename": "022_partner_onboarding.sql",
+      "checksum": "183a338250ae80c5f5325fb649f0b379cc192991b875dfd7a9a9f3f3a0760827",
+      "demo": false,
+      "steps": [
+        "022_partner_onboarding.sql/001",
+        "022_partner_onboarding.sql/002",
+        "022_partner_onboarding.sql/003",
+        "022_partner_onboarding.sql/004"
+      ],
+      "legacy_checksums": [
+        "61e717d798651e4cc90880dad697ea2fa21209a2166f0874ff77dec76c7c8ffd"
+      ]
+    },
+    {
+      "filename": "023_order_lifecycle.sql",
+      "checksum": "1ffed90971f2bc20b3e0b4ee9c78ab77fa5dec16a26d1556600f0337bc5af8e9",
+      "demo": false,
+      "steps": [
+        "023_order_lifecycle.sql/001",
+        "023_order_lifecycle.sql/002"
+      ],
+      "legacy_checksums": [
+        "dd2b692cbb22e40ec94f007e9585645c9584764250ce4adcb0376fd9cc36d7d9"
+      ]
+    },
+    {
+      "filename": "024_delivery_offers.sql",
+      "checksum": "7b26720c28edd114e5d47778a3d481a2d2114a6a0170f4e58c89bdfe45c6b870",
+      "demo": false,
+      "steps": [
+        "024_delivery_offers.sql/001",
+        "024_delivery_offers.sql/002",
+        "024_delivery_offers.sql/003",
+        "024_delivery_offers.sql/004",
+        "024_delivery_offers.sql/005",
+        "024_delivery_offers.sql/006",
+        "024_delivery_offers.sql/007",
+        "024_delivery_offers.sql/008",
+        "024_delivery_offers.sql/009"
+      ],
+      "legacy_checksums": [
+        "6b019014b60a15364971e7d4100c9d8c07b3412f28349bfbce656b423b783db4"
+      ]
+    },
+    {
+      "filename": "025_order_amount_compatibility.sql",
+      "checksum": "c5df92f0b08db82f0ddfd2240842dfda455cb2c4f50374f49751df22ae5a78c5",
+      "demo": false,
+      "steps": [
+        "025_order_amount_compatibility.sql/001",
+        "025_order_amount_compatibility.sql/002",
+        "025_order_amount_compatibility.sql/003",
+        "025_order_amount_compatibility.sql/004",
+        "025_order_amount_compatibility.sql/005",
+        "025_order_amount_compatibility.sql/006"
+      ],
+      "legacy_checksums": [
+        "b83f62172c37cb09b670b17d48d08c7655c3d549a4fd6db04df8beb7d34edfdd"
+      ]
+    },
+    {
+      "filename": "026_onboarding_payments.sql",
+      "checksum": "f57d7c24d54fce19304027a0354cc1b565c155705c1cdede574cd35df227002e",
+      "demo": false,
+      "steps": [
+        "026_onboarding_payments.sql/001",
+        "026_onboarding_payments.sql/002"
+      ],
+      "legacy_checksums": [
+        "0279dea9be018962c6a968e357a41cd2536ce8d8a467c16f75749ed3926d0497"
+      ]
+    },
+    {
+      "filename": "027_ratings.sql",
+      "checksum": "35389b4909bde99e5cf0ee9ab8534b35565c638a708922d0627135c5db55a71e",
+      "demo": false,
+      "steps": [
+        "027_ratings.sql/001",
+        "027_ratings.sql/002"
+      ],
+      "legacy_checksums": [
+        "91003b0c1a01e8a076f04466c9b8544e6b86caaae28c73d91fa61db0ea51f3e8"
+      ]
+    },
+    {
+      "filename": "028_document_backend.sql",
+      "checksum": "2a728fe438932c2e83a9061b394b5d8d1af40efb0ace2fd200c4f88451e1ae11",
+      "demo": false,
+      "steps": [
+        "028_document_backend.sql/001"
+      ],
+      "legacy_checksums": [
+        "4c321dfdcaa18b2482f9d3451a298afb4b343b43daf755229f419765c89ae88f"
+      ]
+    },
+    {
+      "filename": "029_order_notifications.sql",
+      "checksum": "38172fb755f366848096b17f41732c940bd8c8951e306adab9cd783b19bddfdd",
+      "demo": false,
+      "steps": [
+        "029_order_notifications.sql/001",
+        "029_order_notifications.sql/002",
+        "029_order_notifications.sql/003"
+      ],
+      "legacy_checksums": [
+        "f0310ea6cddafeefb205111ac1fae91a93efafc2a6c942933feb90599f319160"
+      ]
+    },
+    {
+      "filename": "030_restaurant_profile.sql",
+      "checksum": "8d3353537a9024929a91cbf55379d230ff41776ed91791c6edc17619f3757d3b",
+      "demo": false,
+      "steps": [
+        "030_restaurant_profile.sql/001"
+      ],
+      "legacy_checksums": [
+        "b39f72329b53315d6cb19b6a1b8dd89c9abab7aae2cbe6566ac17f306873bb92"
+      ]
+    },
+    {
+      "filename": "031_review_moderation.sql",
+      "checksum": "f7bb59002cb1492b833eb84f5484fdceea6346658b7ee67a16c12687dcb625c9",
+      "demo": false,
+      "steps": [
+        "031_review_moderation.sql/001",
+        "031_review_moderation.sql/002",
+        "031_review_moderation.sql/003"
+      ],
+      "legacy_checksums": [
+        "ab1e1ebee30b256386d5b0b0c5c5197f80cecfe2a84fa2d96c810871b6d24845"
+      ]
+    },
+    {
+      "filename": "032_partner_workspaces.sql",
+      "checksum": "f00bfd30522a93b004b5f71b2b4f99ca7cbe26224f12eff8acf310492172ec8b",
+      "demo": false,
+      "steps": [
+        "032_partner_workspaces.sql/001",
+        "032_partner_workspaces.sql/002",
+        "032_partner_workspaces.sql/003",
+        "032_partner_workspaces.sql/004",
+        "032_partner_workspaces.sql/005",
+        "032_partner_workspaces.sql/006"
+      ],
+      "legacy_checksums": [
+        "d95b19ab267a98a1ceeb4cdb6e00ce4c65b8e4ec48e184fd78c926bdbadc0dc9"
+      ]
+    },
+    {
+      "filename": "033_operational_stations.sql",
+      "checksum": "2894d4e8f7f8ad2621a7434561a2a40d1c82d88f1cf32a197a51f32ef2d26fb7",
+      "demo": false,
+      "steps": [
+        "033_operational_stations.sql/001",
+        "033_operational_stations.sql/002",
+        "033_operational_stations.sql/003",
+        "033_operational_stations.sql/004",
+        "033_operational_stations.sql/005",
+        "033_operational_stations.sql/006",
+        "033_operational_stations.sql/007",
+        "033_operational_stations.sql/008",
+        "033_operational_stations.sql/009",
+        "033_operational_stations.sql/010",
+        "033_operational_stations.sql/011",
+        "033_operational_stations.sql/012",
+        "033_operational_stations.sql/013",
+        "033_operational_stations.sql/014",
+        "033_operational_stations.sql/015",
+        "033_operational_stations.sql/016",
+        "033_operational_stations.sql/017",
+        "033_operational_stations.sql/018",
+        "033_operational_stations.sql/019",
+        "033_operational_stations.sql/020",
+        "033_operational_stations.sql/021",
+        "033_operational_stations.sql/022",
+        "033_operational_stations.sql/023",
+        "033_operational_stations.sql/024",
+        "033_operational_stations.sql/025"
+      ],
+      "legacy_checksums": [
+        "5d52ac653d7b4e82e4740d6f13b81ffa26705764fcac8b4b00d80d30caca7efe"
+      ]
+    },
+    {
+      "filename": "034_station_relations.sql",
+      "checksum": "98065bf61c105ec5bb4db33f0b094ffa6cf84059a6381f50306ea59f7176ddfc",
+      "demo": false,
+      "steps": [
+        "034_station_relations.sql/001",
+        "034_station_relations.sql/002",
+        "034_station_relations.sql/003",
+        "034_station_relations.sql/004",
+        "034_station_relations.sql/005",
+        "034_station_relations.sql/006",
+        "034_station_relations.sql/007",
+        "034_station_relations.sql/008",
+        "034_station_relations.sql/009",
+        "034_station_relations.sql/010",
+        "034_station_relations.sql/011",
+        "034_station_relations.sql/012",
+        "034_station_relations.sql/013",
+        "034_station_relations.sql/014",
+        "034_station_relations.sql/015",
+        "034_station_relations.sql/016",
+        "034_station_relations.sql/017",
+        "034_station_relations.sql/018",
+        "034_station_relations.sql/019",
+        "034_station_relations.sql/020",
+        "034_station_relations.sql/021",
+        "034_station_relations.sql/022",
+        "034_station_relations.sql/023"
+      ],
+      "legacy_checksums": [
+        "b1d1be0364cfba06b12133803ef1816e234d4ba1893d3f29b4e0f892c5c968db"
+      ]
+    },
+    {
+      "filename": "035_order_events.sql",
+      "checksum": "86f9a0874a31f9451714f2a75033c0597c5e6bab2c402fcd4d63a7ff1f9743eb",
+      "demo": false,
+      "steps": [
+        "035_order_events.sql/001",
+        "035_order_events.sql/002",
+        "035_order_events.sql/003",
+        "035_order_events.sql/004",
+        "035_order_events.sql/005",
+        "035_order_events.sql/006",
+        "035_order_events.sql/007",
+        "035_order_events.sql/008",
+        "035_order_events.sql/009"
+      ],
+      "legacy_checksums": [
+        "f23eb25c78bbdaaa4713d86a9ec0f88de8b3e8cc56067b3311e4a0c2fab8feca"
+      ]
+    },
+    {
+      "filename": "036_central_finance.sql",
+      "checksum": "b1d8a3c9970f418d0c9aa976bb0e0c52917d882488ef6709d9ed7c05c188859b",
+      "demo": false,
+      "steps": [
+        "036_central_finance.sql/001",
+        "036_central_finance.sql/002",
+        "036_central_finance.sql/003",
+        "036_central_finance.sql/004",
+        "036_central_finance.sql/005",
+        "036_central_finance.sql/006",
+        "036_central_finance.sql/007",
+        "036_central_finance.sql/008",
+        "036_central_finance.sql/009",
+        "036_central_finance.sql/010",
+        "036_central_finance.sql/011",
+        "036_central_finance.sql/012",
+        "036_central_finance.sql/013",
+        "036_central_finance.sql/014",
+        "036_central_finance.sql/015",
+        "036_central_finance.sql/016",
+        "036_central_finance.sql/017",
+        "036_central_finance.sql/018",
+        "036_central_finance.sql/019",
+        "036_central_finance.sql/020",
+        "036_central_finance.sql/021",
+        "036_central_finance.sql/022",
+        "036_central_finance.sql/023",
+        "036_central_finance.sql/024",
+        "036_central_finance.sql/025",
+        "036_central_finance.sql/026",
+        "036_central_finance.sql/027",
+        "036_central_finance.sql/028",
+        "036_central_finance.sql/029",
+        "036_central_finance.sql/030",
+        "036_central_finance.sql/031",
+        "036_central_finance.sql/032",
+        "036_central_finance.sql/033"
+      ],
+      "legacy_checksums": [
+        "dc9242c96947f7f5cef90d6f748a52c1e1b85693d5e813fa581762d79ec91942"
+      ]
+    },
+    {
+      "filename": "037_finance_operations.sql",
+      "checksum": "311527cadc8964be014abdea8f6f9e23156a76dc81697c8914aad6b4bd621cd4",
+      "demo": false,
+      "steps": [
+        "037_finance_operations.sql/001",
+        "037_finance_operations.sql/002",
+        "037_finance_operations.sql/003",
+        "037_finance_operations.sql/004",
+        "037_finance_operations.sql/005",
+        "037_finance_operations.sql/006",
+        "037_finance_operations.sql/007",
+        "037_finance_operations.sql/008"
+      ],
+      "legacy_checksums": [
+        "2438816e00ec98071fc3a12560835d876896c4175bd8249f3eb437313995b3b0"
+      ]
+    },
+    {
+      "filename": "038_auth_and_operations.sql",
+      "checksum": "012c682a9db8ddbc7a33920bdaf0f897da96b2d47b304ff6a917f4587419bc98",
+      "demo": false,
+      "steps": [
+        "038_auth_and_operations.sql/001",
+        "038_auth_and_operations.sql/002",
+        "038_auth_and_operations.sql/003",
+        "038_auth_and_operations.sql/004",
+        "038_auth_and_operations.sql/005"
+      ],
+      "legacy_checksums": [
+        "d630025e8b1b18f2d82784040167d76f4a14f1ebea8eb4d5f872250a0c491aaa"
+      ]
+    },
+    {
+      "filename": "039_operating_hours.sql",
+      "checksum": "4b87df0f4d3b9768d4c54230c425899ca47b8a40a8a7c0aa75a373335aa707ee",
+      "demo": false,
+      "steps": [
+        "039_operating_hours.sql/001"
+      ],
+      "legacy_checksums": [
+        "a28e26f3ddf1d27a888f3a2d4a4d25f4937d721f1b9537dd2c4203bc52f596b0"
+      ]
+    },
+    {
+      "filename": "040_finance_refund_jobs.sql",
+      "checksum": "aab845ae861c8d4f529fbad69365b8ba3dde4efaab067dc327e673a09d934b9d",
+      "demo": false,
+      "steps": [
+        "040_finance_refund_jobs.sql/001",
+        "040_finance_refund_jobs.sql/002",
+        "040_finance_refund_jobs.sql/003"
+      ],
+      "legacy_checksums": [
+        "662391bfa7d01374b7fe2987041cedfaa44717b0673d8ec1dfffab9b493b8a64"
+      ]
+    },
+    {
+      "filename": "041_launch_delivery_pricing.sql",
+      "checksum": "c086bc0f8d6b3c07022fc33698c19967c75baf137e6e5c4fd16e4c2eb426ab90",
+      "demo": false,
+      "steps": [
+        "041_launch_delivery_pricing.sql/001"
+      ],
+      "legacy_checksums": [
+        "f67e19ddca514d245dfb38c83ae72ee53808088097d96efd0691a25fd6fb6bbe"
+      ]
+    },
+    {
+      "filename": "042_push_delivery.sql",
+      "checksum": "e66b86906b20717bc1b201dcef030a7e77141a5a22f42b837148419f5d4f919b",
+      "demo": false,
+      "steps": [
+        "042_push_delivery.sql/001",
+        "042_push_delivery.sql/002",
+        "042_push_delivery.sql/003",
+        "042_push_delivery.sql/004",
+        "042_push_delivery.sql/005",
+        "042_push_delivery.sql/006",
+        "042_push_delivery.sql/007"
+      ],
+      "legacy_checksums": [
+        "07a9ae153e8b8890b52c82f273bfcd922fe1ba595acc3afdebabfec1c0d73c67"
+      ]
+    },
+    {
+      "filename": "043_secure_otp.sql",
+      "checksum": "f9f9d97048d131353206417e5a3204b6c0bb014e6f8a16604efeb3fa469752e4",
+      "demo": false,
+      "steps": [
+        "043_secure_otp.sql/001"
+      ],
+      "legacy_checksums": [
+        "5b7f117c8aa32258e3deeb68bbdf5f437ab9195d55a83c456e8e8ac6ca033267"
+      ]
+    },
+    {
+      "filename": "044_rate_limits.sql",
+      "checksum": "489f532e7521c1f6d0d9be4561125fe1ca03def8c8bf6f891e6c68cb2a2f3401",
+      "demo": false,
+      "steps": [
+        "044_rate_limits.sql/001",
+        "044_rate_limits.sql/002"
+      ],
+      "legacy_checksums": [
+        "6538c299995fc5ee12d93705f13f786fb8714a7a5e71431532b93d610161b358"
+      ]
+    },
+    {
+      "filename": "045_financial_integrity.sql",
+      "checksum": "621615a27b5f6f65e602b9c24fbd5a7208beac8bf137e18a3fcb0c5387470c8f",
+      "demo": false,
+      "steps": [
+        "045_financial_integrity.sql/001",
+        "045_financial_integrity.sql/002",
+        "045_financial_integrity.sql/003",
+        "045_financial_integrity.sql/004",
+        "045_financial_integrity.sql/005",
+        "045_financial_integrity.sql/006"
+      ],
+      "legacy_checksums": [
+        "88329cc2ce9cecf7c1ecd7b0b5e3f44ea60551c66ebb93c12c18a0d13e98c3b3"
+      ]
+    },
+    {
+      "filename": "046_central_promotions.sql",
+      "checksum": "8e387218f35914b85cdeb14a7dfa27707c471e5a8a2137687ccc2742980ad7c2",
+      "demo": false,
+      "steps": [
+        "046_central_promotions.sql/001",
+        "046_central_promotions.sql/002",
+        "046_central_promotions.sql/003",
+        "046_central_promotions.sql/004"
+      ],
+      "legacy_checksums": [
+        "708a5a46f32a57c28d29e13d4f89ec5a9a859dfdbda72fdc6407af95a79e21ae"
+      ]
+    },
+    {
+      "filename": "047_settlement_recovery.sql",
+      "checksum": "22ded41b1d4d264011b80482da834aa6b9968d15f5979953c9629c9c326ff8ff",
+      "demo": false,
+      "steps": [
+        "047_settlement_recovery.sql/001",
+        "047_settlement_recovery.sql/002",
+        "047_settlement_recovery.sql/003",
+        "047_settlement_recovery.sql/004",
+        "047_settlement_recovery.sql/005",
+        "047_settlement_recovery.sql/006",
+        "047_settlement_recovery.sql/007",
+        "047_settlement_recovery.sql/008"
+      ],
+      "legacy_checksums": [
+        "a024aa77321376981fb0915ee4ab30b25ba22f0fa8e084edcd949bc47963acf0"
+      ]
+    },
+    {
+      "filename": "048_payout_attempts.sql",
+      "checksum": "642f77ae16a34c48f0e0cd8f7b8080aacebd167ec3f8094023676df492faf064",
+      "demo": false,
+      "steps": [
+        "048_payout_attempts.sql/001",
+        "048_payout_attempts.sql/002",
+        "048_payout_attempts.sql/003",
+        "048_payout_attempts.sql/004",
+        "048_payout_attempts.sql/005"
+      ],
+      "legacy_checksums": [
+        "cfef658a31e74b79a771fada6d9e8489445d3e9d1f9ebf82586462da4ea05a6e"
+      ]
+    },
+    {
+      "filename": "049_delivery_evidence.sql",
+      "checksum": "18189c4aa9de9a063cdbde39bc1f0580a7b09a13acaf3da844b927fe6c31be6e",
+      "demo": false,
+      "steps": [
+        "049_delivery_evidence.sql/001",
+        "049_delivery_evidence.sql/002",
+        "049_delivery_evidence.sql/003",
+        "049_delivery_evidence.sql/004",
+        "049_delivery_evidence.sql/005"
+      ],
+      "legacy_checksums": [
+        "9b4cda9cb269e70aa1b34ccfc04e500828b459882cce8b41508bc914f3ce1483"
+      ]
+    },
+    {
+      "filename": "050_refresh_families.sql",
+      "checksum": "b16f1d2a26bb05759d4fe4ffc0f7aa45da7a94275064dd81472aa22ab25b2e97",
+      "demo": false,
+      "steps": [
+        "050_refresh_families.sql/001",
+        "050_refresh_families.sql/002",
+        "050_refresh_families.sql/003",
+        "050_refresh_families.sql/004"
+      ],
+      "legacy_checksums": [
+        "7b34c6a4945f7a9f880b3da4a6407fb1ceaddb24ee5776300548ea9971410364"
+      ]
+    },
+    {
+      "filename": "051_textbee_sms.sql",
+      "checksum": "902d903b7fe86b18713d178cdcfe94c272083e8a80e89f729c0eb9fb5c42870a",
+      "demo": false,
+      "steps": [
+        "051_textbee_sms.sql/001"
+      ],
+      "legacy_checksums": [
+        "6b47b96d47536e455bdd1e5b69f4404fe57d839247ef820be43917e2a2d2003a"
+      ]
+    },
+    {
+      "filename": "052_razorpay_onboarding.sql",
+      "checksum": "70ca6d0f41529e12765960d8f6ebb9a90508d39d9976531df0a19a4473f07e47",
+      "demo": false,
+      "steps": [
+        "052_razorpay_onboarding.sql/001",
+        "052_razorpay_onboarding.sql/002",
+        "052_razorpay_onboarding.sql/003",
+        "052_razorpay_onboarding.sql/004"
+      ],
+      "legacy_checksums": [
+        "95a63f2401d3d82bec60b0e939f60a0fa10182012ab6e802f256b18b710ef7b7"
+      ]
+    },
+    {
+      "filename": "053_delivery_code_recovery.sql",
+      "checksum": "ade80f419d96bb30249cd927205b8ec21f7defa4c2e935eeb54b5efaa27a4d8c",
+      "demo": false,
+      "steps": [
+        "053_delivery_code_recovery.sql/001"
+      ],
+      "legacy_checksums": [
+        "9996432f2421987e23baec478958ab9b33b051eb22534362908106367c31036f"
+      ]
+    },
+    {
+      "filename": "20240101_create_auth.sql",
+      "checksum": "33dbb149924a159071c381ba588306e8669600022845f15a03424ff882647e85",
+      "demo": false,
+      "steps": [
+        "20240101_create_auth.sql/001"
+      ],
+      "legacy_checksums": [
+        "60863e7e304878d0f5ac541bb533a3b92c0cfb3595634eb41f65606c2f7b91b8"
+      ]
+    }
+  ]
+}

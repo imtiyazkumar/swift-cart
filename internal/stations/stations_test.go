@@ -130,6 +130,8 @@ func TestRegistrationRequiresCoverageAndIgnoresChosenRestaurantStation(t *testin
 
 func TestAddressDiscoveryCartAndCheckoutIsolation(t *testing.T) {
 	p := seed(t)
+	// This test isolates station coverage from the demo kitchen's 09:00–23:00 hours.
+	exec(t, p, `DELETE FROM merchants.merchant_operating_hours`)
 	ctx := context.Background()
 	t.Setenv("CUSTOMER_PAYMENT_METHOD", "CASH_ON_DELIVERY")
 	exec(t, p, `INSERT INTO public.stations(id,name,latitude,longitude,radius_m) VALUES($1,'Overlap',34.02,74,5000)`, stationB)
