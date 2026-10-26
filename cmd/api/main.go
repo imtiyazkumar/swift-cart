@@ -63,6 +63,12 @@ func main() {
 		logg.Sugar().Fatalw("db init", "error", err)
 	}
 	defer pg.Close()
+	schemaContext, cancelSchemaCheck := context.WithTimeout(context.Background(), 10*time.Second)
+	err = db.CheckSchema(schemaContext, pg.Pool)
+	cancelSchemaCheck()
+	if err != nil {
+		logg.Sugar().Fatalw("database startup check failed", "error", err)
+	}
 
 	// Echo instance
 	e := echo.New()

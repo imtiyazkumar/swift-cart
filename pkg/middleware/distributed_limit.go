@@ -20,7 +20,7 @@ func DistributedRateLimiter(pool *pgxpool.Pool, scope string, limit int) echo.Mi
 			var count int
 			err := pool.QueryRow(c.Request().Context(), `INSERT INTO auth.rate_windows(scope,client,window_start,count) VALUES($1,$2,$3,1) ON CONFLICT(scope,client,window_start) DO UPDATE SET count=auth.rate_windows.count+1 RETURNING count`, scope, c.RealIP(), now).Scan(&count)
 			if err != nil {
-				return echo.NewHTTPError(http.StatusServiceUnavailable, "request protection unavailable")
+				return echo.NewHTTPError(http.StatusServiceUnavailable, "request protection unavailable").SetInternal(err)
 			}
 			if count > limit {
 				c.Response().Header().Set("Retry-After", "60")

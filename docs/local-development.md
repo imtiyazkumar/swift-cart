@@ -16,8 +16,13 @@ ignored. The root mobile file is a public endpoint reference only.
 | Development | `yember_local`      | `http://127.0.0.1:8080` | `http://127.0.0.1:5173` |
 | Test        | `yember_local_test` | `http://127.0.0.1:8084` | `http://127.0.0.1:5174` |
 
-Both databases were created, migrated through 032 (plus the legacy auth migration),
-and seeded locally. The old application database was not reset or migrated.
+Both database profiles were initially seeded locally. Keep each profile migrated
+to the current checkout before starting its API; the API does not apply migrations
+automatically. From `yember-core`, run `go run ./cmd/migrate` using that profile's
+environment, then `go run ./cmd/api`. The current schema is through migration 053
+(plus the legacy auth migration). Missing schema now stops startup with the
+migration command instead of causing authentication requests to return 503.
+The old application database was not reset.
 Each profile has a different generated JWT secret. Local HTTP uses
 `ADMIN_COOKIE_SECURE=false`; live email is disabled and provider credentials are
 empty. Cash-on-delivery checkout is enabled for local workflow testing.

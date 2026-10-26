@@ -21,6 +21,8 @@ Earlier in the same implementation session, all three apps exported Android, iOS
 
 Docker was unavailable in this environment, so the image, Compose topology and real ingress have not been validated. No production migration, live charge or live payout is established by this report.
 
+Local startup repair: `yember_local` was subsequently found to be missing migrations 036–053. They were applied, and the running admin-session endpoint returned the expected 401 without a cookie instead of 503. The API now checks required schema before serving traffic and reports the migration command on failure. The new schema regression test and focused middleware/API checks passed. This local repair is not evidence that staging or production has been migrated.
+
 ## 2. Required before starting sandbox end-to-end testing
 
 | ID | Essential prerequisite | Evidence required to start |
