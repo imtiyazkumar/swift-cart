@@ -112,15 +112,22 @@ func (s *Service) Checkout(ctx context.Context, user, order string) (*CheckoutSe
 	if !enabled {
 		return nil, errors.New("central finance is not activated")
 	}
-	if status != "PAYMENT_PENDING" {
+	if status != "PAYMENT_PENDING" && status != "PICKED_UP" && status != "OUT_FOR_DELIVERY" {
 		return nil, errors.New("order is not awaiting payment")
 	}
-	var id, providerID, paymentStatus string
+	var id, providerID, paymentStatus, provider string
 	var attempt int
 	var started *time.Time
-	err = tx.QueryRow(ctx, `SELECT id,COALESCE(provider_id,''),status,attempt,request_started_at FROM finance.payment_attempts WHERE order_id=$1 ORDER BY attempt DESC LIMIT 1`, order).Scan(&id, &providerID, &paymentStatus, &attempt, &started)
+	err = tx.QueryRow(ctx, `SELECT id,COALESCE(provider_id,''),status,attempt,request_started_at,provider FROM finance.payment_attempts WHERE order_id=$1 ORDER BY attempt DESC LIMIT 1`, order).Scan(&id, &providerID, &paymentStatus, &attempt, &started, &provider)
 	if err != nil && err != pgx.ErrNoRows {
 		return nil, err
+	}
+	var paid bool
+	if err = tx.QueryRow(ctx, `SELECT EXISTS(SELECT 1 FROM finance.payment_attempts WHERE order_id=$1 AND status='PAID')`, order).Scan(&paid); err != nil {
+		return nil, err
+	}
+	if paid {
+		return nil, errors.New("order payment is already collected")
 	}
 	if providerID != "" && paymentStatus != "EXPIRED" {
 		var link PaymentLink
@@ -138,7 +145,7 @@ func (s *Service) Checkout(ctx context.Context, user, order string) (*CheckoutSe
 		}
 		paymentStatus = "EXPIRED"
 	}
-	if id == "" || paymentStatus == "EXPIRED" {
+	if id == "" || paymentStatus == "EXPIRED" || provider == "COD" {
 		attempt++
 		started = nil
 		if err = tx.QueryRow(ctx, `INSERT INTO finance.payment_attempts(order_id,attempt,provider,amount,currency) VALUES($1,$2,'RAZORPAY',$3,$4) RETURNING id`, order, attempt, amount, currency).Scan(&id); err != nil {

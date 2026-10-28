@@ -22,6 +22,10 @@ try {
     $headers = @{ Authorization = "Bearer $($admin.access_token)" }
     $stats = Invoke-RestMethod "$base/admin/dashboard/stats" -Headers $headers
     $overview = Invoke-RestMethod "$base/admin/console/overview" -Headers $headers
+    foreach ($feePath in @('onboarding-fee','delivery-registration-fee')) {
+        $feePolicy = Invoke-RestMethod "$base/admin/settings/$feePath" -Headers $headers
+        if ($feePolicy.amount -le 0 -or $feePolicy.currency -ne 'INR') { throw "Invalid registration fee policy: $feePath" }
+    }
     if ($stats.total_orders -lt 10 -or $overview.customers -lt 1 -or $overview.daily_orders.Count -ne 7) { throw 'Dashboard fixture totals are incomplete.' }
     foreach ($resource in @('customers','restaurants','partners','orders','payments','reviews','coupons','users','audit','emails','support')) {
         $null = Invoke-RestMethod "$base/admin/manage/$resource" -Headers $headers
@@ -31,7 +35,7 @@ try {
     Write-Output 'ADMIN: login, dashboard, all management lists, cookie restore and logout passed.'
     foreach ($account in @(
         @{email='customer@yember.test';role='CUSTOMER';path='/customer/addresses'},
-        @{email='restaurant@yember.test';role='MERCHANT_OWNER';path='/restaurant/profile'},
+        @{email='restaurant@yember.test';role='RESTAURANT_OWNER';path='/restaurant/profile'},
         @{email='delivery@yember.test';role='DELIVERY_PARTNER';path='/rider/profile'}
     )) {
         $body = @{email=$account.email;password=$env:LOCAL_SEED_PASSWORD} | ConvertTo-Json
@@ -40,11 +44,16 @@ try {
         $identity = Invoke-RestMethod "$base/auth/me" -Headers $accountHeaders
         if ($identity.role -ne $account.role) { throw "Role check failed for $($account.role)" }
         $null = Invoke-RestMethod "$base$($account.path)" -Headers $accountHeaders
+        if ($account.role -ne 'CUSTOMER') {
+            $registration = Invoke-RestMethod "$base/partner/finance/registration" -Headers $accountHeaders
+            if ($registration.amount_paise -le 0 -or $registration.refundable -ne $false) { throw 'Invalid partner registration payment contract.' }
+            $null = Invoke-RestMethod "$base/partner/finance/cash-handovers" -Headers $accountHeaders
+        }
         foreach ($path in @('/partner/account','/partner/overview?days=7','/partner/orders?scope=history','/partner/support')) {
             if ($account.role -ne 'CUSTOMER') { $null = Invoke-RestMethod "$base$path" -Headers $accountHeaders }
         }
         if ($account.role -eq 'DELIVERY_PARTNER') { $null = Invoke-RestMethod "$base/partner/earnings?days=7" -Headers $accountHeaders }
-        if ($account.role -eq 'MERCHANT_OWNER') { $null = Invoke-RestMethod "$base/partner/reviews" -Headers $accountHeaders }
+        if ($account.role -eq 'RESTAURANT_OWNER') { $null = Invoke-RestMethod "$base/partner/reviews" -Headers $accountHeaders }
         $null = Invoke-RestMethod "$base/auth/logout" -Method Post -ContentType 'application/json' -Body (@{refresh_token=$tokens.refresh_token} | ConvertTo-Json)
         Write-Output "$($account.role): password login, identity and profile passed."
     }

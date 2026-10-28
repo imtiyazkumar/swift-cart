@@ -40,7 +40,6 @@ func SignUp(cfg *config.Config, logger *zap.Logger, dbPool *pgxpool.Pool) echo.H
 		var req struct {
 			Email    string `json:"email"`
 			Password string `json:"password"`
-			OTP      string `json:"otp"`
 		}
 		if err := c.Bind(&req); err != nil {
 			return echo.NewHTTPError(http.StatusBadRequest, "invalid request body")
@@ -94,9 +93,6 @@ func Login(cfg *config.Config, logger *zap.Logger, dbPool *pgxpool.Pool) echo.Ha
 		if err := user.VerifyPassword(req.Password); err != nil {
 			return echo.NewHTTPError(http.StatusUnauthorized, "invalid credentials")
 		}
-		if err := requireAdminMFA(c, dbPool, user, req.OTP); err != nil {
-			return err
-		}
 		access, err := GenerateAccessToken(cfg.JWTSecret, user.ID, user.Role)
 		if err != nil {
 			logger.Error("access token error", zap.Error(err))
@@ -149,7 +145,7 @@ func Refresh(cfg *config.Config, logger *zap.Logger, dbPool *pgxpool.Pool) echo.
 		if err != nil {
 			return echo.NewHTTPError(500, "could not generate token")
 		}
-		if _, err = tx.Exec(c.Request().Context(), `INSERT INTO auth.refresh_sessions(token_hash,user_id,expires_at,family_id,family_expires_at,parent_hash) VALUES($1,$2,LEAST(now()+interval '7 days',$4::timestamptz),$3,$4,$5)`, tokenHash(newRefresh), claims.UserID, family, absolute, tokenHash(req.RefreshToken)); err != nil {
+		if _, err = tx.Exec(c.Request().Context(), `INSERT INTO public.refresh_tokens(token_hash,user_id,expires_at,family_id,family_expires_at,parent_hash) VALUES($1,$2,LEAST(now()+interval '7 days',$4::timestamptz),$3,$4,$5)`, tokenHash(newRefresh), claims.UserID, family, absolute, tokenHash(req.RefreshToken)); err != nil {
 			return echo.NewHTTPError(500, "could not rotate session")
 		}
 		if err = tx.Commit(c.Request().Context()); err != nil {
@@ -192,7 +188,7 @@ func SendOTP(logger *zap.Logger, dbPool *pgxpool.Pool) echo.HandlerFunc {
 	}
 }
 
-// VerifyOTP verifies the OTP code against auth.otp_codes and logs in or creates the user.
+// VerifyOTP verifies the OTP code against public.otp_challenges and logs in or creates the user.
 func VerifyOTP(cfg *config.Config, logger *zap.Logger, dbPool *pgxpool.Pool) echo.HandlerFunc {
 	return func(c echo.Context) error {
 		var req struct {
@@ -222,7 +218,7 @@ func VerifyOTP(cfg *config.Config, logger *zap.Logger, dbPool *pgxpool.Pool) ech
 		}
 
 		if user.Role == "ADMIN" {
-			return echo.NewHTTPError(403, "administrator password and MFA required")
+			return echo.NewHTTPError(403, "administrator password required")
 		}
 		access, err := GenerateAccessToken(cfg.JWTSecret, user.ID, user.Role)
 		if err != nil {

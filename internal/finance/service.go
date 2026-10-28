@@ -83,7 +83,7 @@ func (s *Service) Commission(ctx context.Context, actor, merchant, reason string
 		return err
 	}
 	defer tx.Rollback(ctx)
-	tag, err := tx.Exec(ctx, `UPDATE public.merchants SET commission_bps=$2 WHERE id=$1 AND deleted_at IS NULL`, merchant, bps)
+	tag, err := tx.Exec(ctx, `UPDATE public.restaurants SET commission_bps=$2 WHERE id=$1 AND deleted_at IS NULL`, merchant, bps)
 	if err != nil {
 		return err
 	}
@@ -119,7 +119,7 @@ func (s *Service) Generate(ctx context.Context, actor string, now time.Time) (st
 	if err != nil {
 		return "", err
 	}
-	rows, err := tx.Query(ctx, `SELECT e.user_id,-sum(e.amount),b.id FROM finance.entries e JOIN finance.bank_accounts b ON b.user_id=e.user_id AND b.status='VERIFIED' JOIN public.users u ON u.id=e.user_id AND u.disabled_at IS NULL AND u.deleted_at IS NULL WHERE e.account='PARTNER_PAYABLE' AND e.created_at<$1 AND NOT EXISTS(SELECT 1 FROM finance.settlement_entries se WHERE se.entry_id=e.id AND NOT EXISTS(SELECT 1 FROM finance.settlement_releases sr WHERE sr.entry_id=se.entry_id AND sr.payout_id=se.payout_id)) AND NOT EXISTS(SELECT 1 FROM finance.discrepancies d WHERE d.resolved_at IS NULL AND (d.order_id IS NULL OR EXISTS(SELECT 1 FROM finance.entries de JOIN finance.journals dj ON dj.id=de.journal_id WHERE dj.order_id=d.order_id AND de.user_id=e.user_id))) GROUP BY e.user_id,b.id HAVING sum(e.amount)<0`, cutoff)
+	rows, err := tx.Query(ctx, `SELECT e.user_id,-sum(e.amount),b.id FROM finance.entries e JOIN finance.bank_accounts b ON b.user_id=e.user_id AND b.status='VERIFIED' JOIN public.users u ON u.id=e.user_id AND u.disabled_at IS NULL AND u.deleted_at IS NULL WHERE e.account='PARTNER_PAYABLE' AND NOT EXISTS(SELECT 1 FROM finance.entries ce JOIN finance.journals cj ON cj.id=ce.journal_id JOIN finance.cod_custody cc ON cc.order_id=cj.order_id WHERE ce.user_id=e.user_id AND NOT EXISTS(SELECT 1 FROM finance.cash_handovers ch WHERE ch.order_id=cc.order_id AND ch.status='PAID')) AND e.created_at<$1 AND NOT EXISTS(SELECT 1 FROM finance.settlement_entries se WHERE se.entry_id=e.id AND NOT EXISTS(SELECT 1 FROM finance.settlement_releases sr WHERE sr.entry_id=se.entry_id AND sr.payout_id=se.payout_id)) AND NOT EXISTS(SELECT 1 FROM finance.discrepancies d WHERE d.resolved_at IS NULL AND (d.order_id IS NULL OR EXISTS(SELECT 1 FROM finance.entries de JOIN finance.journals dj ON dj.id=de.journal_id WHERE dj.order_id=d.order_id AND de.user_id=e.user_id))) GROUP BY e.user_id,b.id HAVING sum(e.amount)<0`, cutoff)
 	if err != nil {
 		return "", err
 	}

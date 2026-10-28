@@ -18,8 +18,16 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
-//go:embed *.sql manifest.json
-var files embed.FS
+//go:embed legacy/*.sql legacy/manifest.json
+var legacyFiles embed.FS
+
+var files = func() fs.FS {
+	source, err := fs.Sub(legacyFiles, "legacy")
+	if err != nil {
+		panic(err)
+	}
+	return source
+}()
 
 type Migration struct {
 	Filename        string   `json:"filename"`

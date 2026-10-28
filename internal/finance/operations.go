@@ -17,6 +17,13 @@ func (s *Service) COD(ctx context.Context, actor, order, reference string) error
 		return err
 	}
 	defer tx.Rollback(ctx)
+	var custody bool
+	if err = tx.QueryRow(ctx, `SELECT EXISTS(SELECT 1 FROM finance.cod_custody WHERE order_id=$1)`, order).Scan(&custody); err != nil {
+		return err
+	}
+	if custody {
+		return errors.New("agent cash must be handed to and acknowledged by the restaurant")
+	}
 	var total int64
 	var currency, status string
 	if err = tx.QueryRow(ctx, `SELECT f.total,f.currency,o.status FROM finance.order_financials f JOIN public.orders o ON o.id=f.order_id WHERE f.order_id=$1 FOR UPDATE OF o`, order).Scan(&total, &currency, &status); err != nil {
@@ -89,7 +96,7 @@ func (s *Service) Adjustment(ctx context.Context, actor, user, order, key, compo
 		return err
 	}
 	var role string
-	if err = tx.QueryRow(ctx, `SELECT role FROM public.users WHERE id=$1 AND role IN ('MERCHANT_OWNER','DELIVERY_PARTNER') AND disabled_at IS NULL AND deleted_at IS NULL FOR UPDATE`, user).Scan(&role); err != nil {
+	if err = tx.QueryRow(ctx, `SELECT role FROM public.users WHERE id=$1 AND role IN ('RESTAURANT_OWNER','DELIVERY_PARTNER') AND disabled_at IS NULL AND deleted_at IS NULL FOR UPDATE`, user).Scan(&role); err != nil {
 		return errors.New("eligible partner required")
 	}
 	if amount < 0 {

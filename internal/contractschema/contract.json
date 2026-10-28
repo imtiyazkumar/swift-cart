@@ -1,0 +1,3030 @@
+{
+  "tables": [
+    {
+      "table": "users",
+      "columns": [
+        {
+          "name": "id",
+          "definition": "bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY",
+          "purpose": "",
+          "sql_type": "bigint"
+        },
+        {
+          "name": "uuid",
+          "definition": "uuid NOT NULL UNIQUE DEFAULT gen_random_uuid()",
+          "purpose": "",
+          "sql_type": "uuid"
+        },
+        {
+          "name": "full_name",
+          "definition": "varchar(160)",
+          "purpose": "",
+          "sql_type": "varchar(160)"
+        },
+        {
+          "name": "email",
+          "definition": "varchar(255) UNIQUE NULL",
+          "purpose": "",
+          "sql_type": "varchar(255)"
+        },
+        {
+          "name": "phone",
+          "definition": "varchar(30) UNIQUE",
+          "purpose": "",
+          "sql_type": "varchar(30)"
+        },
+        {
+          "name": "password_hash",
+          "definition": "text NULL",
+          "purpose": "",
+          "sql_type": "text"
+        },
+        {
+          "name": "role",
+          "definition": "varchar(30)",
+          "purpose": "",
+          "sql_type": "varchar(30)"
+        },
+        {
+          "name": "status",
+          "definition": "varchar(30)",
+          "purpose": "",
+          "sql_type": "varchar(30)"
+        },
+        {
+          "name": "phone_verified_at",
+          "definition": "timestamptz NULL",
+          "purpose": "",
+          "sql_type": "timestamptz"
+        },
+        {
+          "name": "created_at",
+          "definition": "timestamptz NOT NULL DEFAULT now()",
+          "purpose": "",
+          "sql_type": "timestamptz"
+        },
+        {
+          "name": "updated_at",
+          "definition": "timestamptz NOT NULL DEFAULT now() (update via trigger/application)",
+          "purpose": "",
+          "sql_type": "timestamptz"
+        },
+        {
+          "name": "deleted_at",
+          "definition": "timestamptz NULL (soft deletion)",
+          "purpose": "",
+          "sql_type": "timestamptz"
+        }
+      ],
+      "source": "Yember_Architecture_and_Database_Schemas_Detailed_Flows (1).docx"
+    },
+    {
+      "table": "otp_challenges",
+      "columns": [
+        {
+          "name": "id",
+          "definition": "bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY",
+          "purpose": "",
+          "sql_type": "bigint"
+        },
+        {
+          "name": "uuid",
+          "definition": "uuid NOT NULL UNIQUE DEFAULT gen_random_uuid()",
+          "purpose": "",
+          "sql_type": "uuid"
+        },
+        {
+          "name": "user_id",
+          "definition": "bigint FK → users.id NULL",
+          "purpose": "",
+          "sql_type": "bigint"
+        },
+        {
+          "name": "phone",
+          "definition": "varchar(30)",
+          "purpose": "",
+          "sql_type": "varchar(30)"
+        },
+        {
+          "name": "purpose",
+          "definition": "varchar(30)",
+          "purpose": "",
+          "sql_type": "varchar(30)"
+        },
+        {
+          "name": "otp_hash",
+          "definition": "text",
+          "purpose": "",
+          "sql_type": "text"
+        },
+        {
+          "name": "expires_at",
+          "definition": "timestamptz",
+          "purpose": "",
+          "sql_type": "timestamptz"
+        },
+        {
+          "name": "attempts",
+          "definition": "int",
+          "purpose": "",
+          "sql_type": "int"
+        },
+        {
+          "name": "consumed_at",
+          "definition": "timestamptz NULL",
+          "purpose": "",
+          "sql_type": "timestamptz"
+        },
+        {
+          "name": "created_at",
+          "definition": "timestamptz NOT NULL DEFAULT now()",
+          "purpose": "",
+          "sql_type": "timestamptz"
+        },
+        {
+          "name": "updated_at",
+          "definition": "timestamptz NOT NULL DEFAULT now() (update via trigger/application)",
+          "purpose": "",
+          "sql_type": "timestamptz"
+        },
+        {
+          "name": "deleted_at",
+          "definition": "timestamptz NULL (soft deletion)",
+          "purpose": "",
+          "sql_type": "timestamptz"
+        }
+      ],
+      "source": "Yember_Architecture_and_Database_Schemas_Detailed_Flows (1).docx"
+    },
+    {
+      "table": "refresh_tokens",
+      "columns": [
+        {
+          "name": "id",
+          "definition": "bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY",
+          "purpose": "",
+          "sql_type": "bigint"
+        },
+        {
+          "name": "uuid",
+          "definition": "uuid NOT NULL UNIQUE DEFAULT gen_random_uuid()",
+          "purpose": "",
+          "sql_type": "uuid"
+        },
+        {
+          "name": "user_id",
+          "definition": "bigint NOT NULL FK → users.id",
+          "purpose": "",
+          "sql_type": "bigint"
+        },
+        {
+          "name": "token_hash",
+          "definition": "varchar(128) NOT NULL UNIQUE (hash only; never store the raw refresh token)",
+          "purpose": "",
+          "sql_type": "varchar(128)"
+        },
+        {
+          "name": "expires_at",
+          "definition": "timestamptz NOT NULL",
+          "purpose": "",
+          "sql_type": "timestamptz"
+        },
+        {
+          "name": "revoked_at",
+          "definition": "timestamptz NULL",
+          "purpose": "",
+          "sql_type": "timestamptz"
+        },
+        {
+          "name": "replaced_by_token_id",
+          "definition": "bigint FK → refresh_tokens.id NULL (rotation chain)",
+          "purpose": "",
+          "sql_type": "bigint"
+        },
+        {
+          "name": "last_used_at",
+          "definition": "timestamptz NULL",
+          "purpose": "",
+          "sql_type": "timestamptz"
+        },
+        {
+          "name": "device_label",
+          "definition": "varchar(120) NULL",
+          "purpose": "",
+          "sql_type": "varchar(120)"
+        },
+        {
+          "name": "user_agent",
+          "definition": "text NULL",
+          "purpose": "",
+          "sql_type": "text"
+        },
+        {
+          "name": "created_at",
+          "definition": "timestamptz NOT NULL DEFAULT now()",
+          "purpose": "",
+          "sql_type": "timestamptz"
+        },
+        {
+          "name": "updated_at",
+          "definition": "timestamptz NOT NULL DEFAULT now() (update via trigger/application)",
+          "purpose": "",
+          "sql_type": "timestamptz"
+        },
+        {
+          "name": "deleted_at",
+          "definition": "timestamptz NULL (soft deletion)",
+          "purpose": "",
+          "sql_type": "timestamptz"
+        }
+      ],
+      "source": "Yember_Architecture_and_Database_Schemas_Detailed_Flows (1).docx"
+    },
+    {
+      "table": "user_addresses",
+      "columns": [
+        {
+          "name": "id",
+          "definition": "bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY",
+          "purpose": "",
+          "sql_type": "bigint"
+        },
+        {
+          "name": "uuid",
+          "definition": "uuid NOT NULL UNIQUE DEFAULT gen_random_uuid()",
+          "purpose": "",
+          "sql_type": "uuid"
+        },
+        {
+          "name": "user_id",
+          "definition": "bigint FK → users.id",
+          "purpose": "",
+          "sql_type": "bigint"
+        },
+        {
+          "name": "label",
+          "definition": "varchar(50)",
+          "purpose": "",
+          "sql_type": "varchar(50)"
+        },
+        {
+          "name": "contact_name",
+          "definition": "varchar(160)",
+          "purpose": "",
+          "sql_type": "varchar(160)"
+        },
+        {
+          "name": "contact_phone",
+          "definition": "varchar(30)",
+          "purpose": "",
+          "sql_type": "varchar(30)"
+        },
+        {
+          "name": "address_line1",
+          "definition": "text",
+          "purpose": "",
+          "sql_type": "text"
+        },
+        {
+          "name": "address_line2",
+          "definition": "text NULL",
+          "purpose": "",
+          "sql_type": "text"
+        },
+        {
+          "name": "city",
+          "definition": "varchar(120)",
+          "purpose": "",
+          "sql_type": "varchar(120)"
+        },
+        {
+          "name": "latitude",
+          "definition": "numeric(10,7)",
+          "purpose": "",
+          "sql_type": "numeric(10,7)"
+        },
+        {
+          "name": "longitude",
+          "definition": "numeric(10,7)",
+          "purpose": "",
+          "sql_type": "numeric(10,7)"
+        },
+        {
+          "name": "is_default",
+          "definition": "boolean",
+          "purpose": "",
+          "sql_type": "boolean"
+        },
+        {
+          "name": "created_at",
+          "definition": "timestamptz NOT NULL DEFAULT now()",
+          "purpose": "",
+          "sql_type": "timestamptz"
+        },
+        {
+          "name": "updated_at",
+          "definition": "timestamptz NOT NULL DEFAULT now() (update via trigger/application)",
+          "purpose": "",
+          "sql_type": "timestamptz"
+        },
+        {
+          "name": "deleted_at",
+          "definition": "timestamptz NULL (soft deletion)",
+          "purpose": "",
+          "sql_type": "timestamptz"
+        }
+      ],
+      "source": "Yember_Architecture_and_Database_Schemas_Detailed_Flows (1).docx"
+    },
+    {
+      "table": "stations",
+      "columns": [
+        {
+          "name": "id",
+          "definition": "bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY",
+          "purpose": "",
+          "sql_type": "bigint"
+        },
+        {
+          "name": "uuid",
+          "definition": "uuid NOT NULL UNIQUE DEFAULT gen_random_uuid()",
+          "purpose": "",
+          "sql_type": "uuid"
+        },
+        {
+          "name": "name",
+          "definition": "varchar(160)",
+          "purpose": "",
+          "sql_type": "varchar(160)"
+        },
+        {
+          "name": "description",
+          "definition": "text NULL",
+          "purpose": "",
+          "sql_type": "text"
+        },
+        {
+          "name": "latitude",
+          "definition": "numeric(10,7)",
+          "purpose": "",
+          "sql_type": "numeric(10,7)"
+        },
+        {
+          "name": "longitude",
+          "definition": "numeric(10,7)",
+          "purpose": "",
+          "sql_type": "numeric(10,7)"
+        },
+        {
+          "name": "radius_km",
+          "definition": "numeric(8,2)",
+          "purpose": "",
+          "sql_type": "numeric(8,2)"
+        },
+        {
+          "name": "status",
+          "definition": "varchar(20)",
+          "purpose": "",
+          "sql_type": "varchar(20)"
+        },
+        {
+          "name": "created_by",
+          "definition": "bigint FK → users.id",
+          "purpose": "",
+          "sql_type": "bigint"
+        },
+        {
+          "name": "created_at",
+          "definition": "timestamptz NOT NULL DEFAULT now()",
+          "purpose": "",
+          "sql_type": "timestamptz"
+        },
+        {
+          "name": "updated_at",
+          "definition": "timestamptz NOT NULL DEFAULT now() (update via trigger/application)",
+          "purpose": "",
+          "sql_type": "timestamptz"
+        },
+        {
+          "name": "deleted_at",
+          "definition": "timestamptz NULL (soft deletion)",
+          "purpose": "",
+          "sql_type": "timestamptz"
+        }
+      ],
+      "source": "Yember_Architecture_and_Database_Schemas_Detailed_Flows (1).docx"
+    },
+    {
+      "table": "restaurants",
+      "columns": [
+        {
+          "name": "id",
+          "definition": "bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY",
+          "purpose": "",
+          "sql_type": "bigint"
+        },
+        {
+          "name": "uuid",
+          "definition": "uuid NOT NULL UNIQUE DEFAULT gen_random_uuid()",
+          "purpose": "",
+          "sql_type": "uuid"
+        },
+        {
+          "name": "owner_user_id",
+          "definition": "bigint FK → users.id",
+          "purpose": "",
+          "sql_type": "bigint"
+        },
+        {
+          "name": "station_id",
+          "definition": "bigint FK → stations.id",
+          "purpose": "",
+          "sql_type": "bigint"
+        },
+        {
+          "name": "name",
+          "definition": "varchar(200)",
+          "purpose": "",
+          "sql_type": "varchar(200)"
+        },
+        {
+          "name": "description",
+          "definition": "text",
+          "purpose": "",
+          "sql_type": "text"
+        },
+        {
+          "name": "phone",
+          "definition": "varchar(30)",
+          "purpose": "",
+          "sql_type": "varchar(30)"
+        },
+        {
+          "name": "address",
+          "definition": "text",
+          "purpose": "",
+          "sql_type": "text"
+        },
+        {
+          "name": "latitude",
+          "definition": "numeric(10,7)",
+          "purpose": "",
+          "sql_type": "numeric(10,7)"
+        },
+        {
+          "name": "longitude",
+          "definition": "numeric(10,7)",
+          "purpose": "",
+          "sql_type": "numeric(10,7)"
+        },
+        {
+          "name": "image_url",
+          "definition": "text NULL",
+          "purpose": "",
+          "sql_type": "text"
+        },
+        {
+          "name": "fssai_number",
+          "definition": "varchar(100) NULL",
+          "purpose": "",
+          "sql_type": "varchar(100)"
+        },
+        {
+          "name": "status",
+          "definition": "varchar(30)",
+          "purpose": "",
+          "sql_type": "varchar(30)"
+        },
+        {
+          "name": "is_open",
+          "definition": "boolean",
+          "purpose": "",
+          "sql_type": "boolean"
+        },
+        {
+          "name": "approved_by",
+          "definition": "bigint FK → users.id NULL",
+          "purpose": "",
+          "sql_type": "bigint"
+        },
+        {
+          "name": "approved_at",
+          "definition": "timestamptz NULL",
+          "purpose": "",
+          "sql_type": "timestamptz"
+        },
+        {
+          "name": "created_at",
+          "definition": "timestamptz NOT NULL DEFAULT now()",
+          "purpose": "",
+          "sql_type": "timestamptz"
+        },
+        {
+          "name": "updated_at",
+          "definition": "timestamptz NOT NULL DEFAULT now() (update via trigger/application)",
+          "purpose": "",
+          "sql_type": "timestamptz"
+        },
+        {
+          "name": "deleted_at",
+          "definition": "timestamptz NULL (soft deletion)",
+          "purpose": "",
+          "sql_type": "timestamptz"
+        }
+      ],
+      "source": "Yember_Architecture_and_Database_Schemas_Detailed_Flows (1).docx"
+    },
+    {
+      "table": "restaurant_documents",
+      "columns": [
+        {
+          "name": "id",
+          "definition": "bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY",
+          "purpose": "",
+          "sql_type": "bigint"
+        },
+        {
+          "name": "uuid",
+          "definition": "uuid NOT NULL UNIQUE DEFAULT gen_random_uuid()",
+          "purpose": "",
+          "sql_type": "uuid"
+        },
+        {
+          "name": "restaurant_id",
+          "definition": "bigint FK → restaurants.id",
+          "purpose": "",
+          "sql_type": "bigint"
+        },
+        {
+          "name": "document_type",
+          "definition": "varchar(50)",
+          "purpose": "",
+          "sql_type": "varchar(50)"
+        },
+        {
+          "name": "file_url",
+          "definition": "text",
+          "purpose": "",
+          "sql_type": "text"
+        },
+        {
+          "name": "verification_status",
+          "definition": "varchar(30)",
+          "purpose": "",
+          "sql_type": "varchar(30)"
+        },
+        {
+          "name": "verified_by",
+          "definition": "bigint FK → users.id NULL",
+          "purpose": "",
+          "sql_type": "bigint"
+        },
+        {
+          "name": "verified_at",
+          "definition": "timestamptz NULL",
+          "purpose": "",
+          "sql_type": "timestamptz"
+        },
+        {
+          "name": "created_at",
+          "definition": "timestamptz NOT NULL DEFAULT now()",
+          "purpose": "",
+          "sql_type": "timestamptz"
+        },
+        {
+          "name": "updated_at",
+          "definition": "timestamptz NOT NULL DEFAULT now() (update via trigger/application)",
+          "purpose": "",
+          "sql_type": "timestamptz"
+        },
+        {
+          "name": "deleted_at",
+          "definition": "timestamptz NULL (soft deletion)",
+          "purpose": "",
+          "sql_type": "timestamptz"
+        }
+      ],
+      "source": "Yember_Architecture_and_Database_Schemas_Detailed_Flows (1).docx"
+    },
+    {
+      "table": "restaurant_bank_accounts",
+      "columns": [
+        {
+          "name": "id",
+          "definition": "bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY",
+          "purpose": "",
+          "sql_type": "bigint"
+        },
+        {
+          "name": "uuid",
+          "definition": "uuid NOT NULL UNIQUE DEFAULT gen_random_uuid()",
+          "purpose": "",
+          "sql_type": "uuid"
+        },
+        {
+          "name": "restaurant_id",
+          "definition": "bigint FK → restaurants.id",
+          "purpose": "",
+          "sql_type": "bigint"
+        },
+        {
+          "name": "account_holder",
+          "definition": "varchar(160)",
+          "purpose": "",
+          "sql_type": "varchar(160)"
+        },
+        {
+          "name": "account_number_encrypted",
+          "definition": "text",
+          "purpose": "",
+          "sql_type": "text"
+        },
+        {
+          "name": "bank_name",
+          "definition": "varchar(160)",
+          "purpose": "",
+          "sql_type": "varchar(160)"
+        },
+        {
+          "name": "ifsc",
+          "definition": "varchar(30) NULL",
+          "purpose": "",
+          "sql_type": "varchar(30)"
+        },
+        {
+          "name": "verification_status",
+          "definition": "varchar(30)",
+          "purpose": "",
+          "sql_type": "varchar(30)"
+        },
+        {
+          "name": "created_at",
+          "definition": "timestamptz NOT NULL DEFAULT now()",
+          "purpose": "",
+          "sql_type": "timestamptz"
+        },
+        {
+          "name": "updated_at",
+          "definition": "timestamptz NOT NULL DEFAULT now() (update via trigger/application)",
+          "purpose": "",
+          "sql_type": "timestamptz"
+        },
+        {
+          "name": "deleted_at",
+          "definition": "timestamptz NULL (soft deletion)",
+          "purpose": "",
+          "sql_type": "timestamptz"
+        }
+      ],
+      "source": "Yember_Architecture_and_Database_Schemas_Detailed_Flows (1).docx"
+    },
+    {
+      "table": "menu_categories",
+      "columns": [
+        {
+          "name": "id",
+          "definition": "bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY",
+          "purpose": "",
+          "sql_type": "bigint"
+        },
+        {
+          "name": "uuid",
+          "definition": "uuid NOT NULL UNIQUE DEFAULT gen_random_uuid()",
+          "purpose": "",
+          "sql_type": "uuid"
+        },
+        {
+          "name": "image_url",
+          "definition": "text NULL (category image URL; admin managed)",
+          "purpose": "",
+          "sql_type": "text"
+        },
+        {
+          "name": "name",
+          "definition": "varchar(120)",
+          "purpose": "",
+          "sql_type": "varchar(120)"
+        },
+        {
+          "name": "description",
+          "definition": "text NULL",
+          "purpose": "",
+          "sql_type": "text"
+        },
+        {
+          "name": "sort_order",
+          "definition": "int",
+          "purpose": "",
+          "sql_type": "int"
+        },
+        {
+          "name": "is_active",
+          "definition": "boolean",
+          "purpose": "",
+          "sql_type": "boolean"
+        },
+        {
+          "name": "created_at",
+          "definition": "timestamptz NOT NULL DEFAULT now()",
+          "purpose": "",
+          "sql_type": "timestamptz"
+        },
+        {
+          "name": "updated_at",
+          "definition": "timestamptz NOT NULL DEFAULT now() (update via trigger/application)",
+          "purpose": "",
+          "sql_type": "timestamptz"
+        },
+        {
+          "name": "deleted_at",
+          "definition": "timestamptz NULL (soft deletion)",
+          "purpose": "",
+          "sql_type": "timestamptz"
+        }
+      ],
+      "source": "Yember_Architecture_and_Database_Schemas_Detailed_Flows (1).docx"
+    },
+    {
+      "table": "menu_items",
+      "columns": [
+        {
+          "name": "restaurant_id",
+          "definition": "bigint NOT NULL FK → restaurants.id",
+          "purpose": "",
+          "sql_type": "bigint"
+        },
+        {
+          "name": "id",
+          "definition": "bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY",
+          "purpose": "",
+          "sql_type": "bigint"
+        },
+        {
+          "name": "uuid",
+          "definition": "uuid NOT NULL UNIQUE DEFAULT gen_random_uuid()",
+          "purpose": "",
+          "sql_type": "uuid"
+        },
+        {
+          "name": "category_id",
+          "definition": "bigint FK → menu_categories.id",
+          "purpose": "",
+          "sql_type": "bigint"
+        },
+        {
+          "name": "name",
+          "definition": "varchar(180)",
+          "purpose": "",
+          "sql_type": "varchar(180)"
+        },
+        {
+          "name": "description",
+          "definition": "text NULL",
+          "purpose": "",
+          "sql_type": "text"
+        },
+        {
+          "name": "base_price",
+          "definition": "numeric(12,2)",
+          "purpose": "",
+          "sql_type": "numeric(12,2)"
+        },
+        {
+          "name": "image_url",
+          "definition": "text NULL",
+          "purpose": "",
+          "sql_type": "text"
+        },
+        {
+          "name": "preparation_minutes",
+          "definition": "int NULL",
+          "purpose": "",
+          "sql_type": "int"
+        },
+        {
+          "name": "is_available",
+          "definition": "boolean",
+          "purpose": "",
+          "sql_type": "boolean"
+        },
+        {
+          "name": "created_at",
+          "definition": "timestamptz NOT NULL DEFAULT now()",
+          "purpose": "",
+          "sql_type": "timestamptz"
+        },
+        {
+          "name": "updated_at",
+          "definition": "timestamptz NOT NULL DEFAULT now() (update via trigger/application)",
+          "purpose": "",
+          "sql_type": "timestamptz"
+        },
+        {
+          "name": "deleted_at",
+          "definition": "timestamptz NULL (soft deletion)",
+          "purpose": "",
+          "sql_type": "timestamptz"
+        }
+      ],
+      "source": "Yember_Architecture_and_Database_Schemas_Detailed_Flows (1).docx"
+    },
+    {
+      "table": "item_variants",
+      "columns": [
+        {
+          "name": "id",
+          "definition": "bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY",
+          "purpose": "",
+          "sql_type": "bigint"
+        },
+        {
+          "name": "uuid",
+          "definition": "uuid NOT NULL UNIQUE DEFAULT gen_random_uuid()",
+          "purpose": "",
+          "sql_type": "uuid"
+        },
+        {
+          "name": "menu_item_id",
+          "definition": "bigint FK → menu_items.id",
+          "purpose": "",
+          "sql_type": "bigint"
+        },
+        {
+          "name": "name",
+          "definition": "varchar(120)",
+          "purpose": "",
+          "sql_type": "varchar(120)"
+        },
+        {
+          "name": "price_delta",
+          "definition": "numeric(12,2)",
+          "purpose": "",
+          "sql_type": "numeric(12,2)"
+        },
+        {
+          "name": "is_available",
+          "definition": "boolean",
+          "purpose": "",
+          "sql_type": "boolean"
+        },
+        {
+          "name": "created_at",
+          "definition": "timestamptz NOT NULL DEFAULT now()",
+          "purpose": "",
+          "sql_type": "timestamptz"
+        },
+        {
+          "name": "updated_at",
+          "definition": "timestamptz NOT NULL DEFAULT now() (update via trigger/application)",
+          "purpose": "",
+          "sql_type": "timestamptz"
+        },
+        {
+          "name": "deleted_at",
+          "definition": "timestamptz NULL (soft deletion)",
+          "purpose": "",
+          "sql_type": "timestamptz"
+        }
+      ],
+      "source": "Yember_Architecture_and_Database_Schemas_Detailed_Flows (1).docx"
+    },
+    {
+      "table": "carts",
+      "columns": [
+        {
+          "name": "id",
+          "definition": "bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY",
+          "purpose": "",
+          "sql_type": "bigint"
+        },
+        {
+          "name": "uuid",
+          "definition": "uuid NOT NULL UNIQUE DEFAULT gen_random_uuid()",
+          "purpose": "",
+          "sql_type": "uuid"
+        },
+        {
+          "name": "user_id",
+          "definition": "bigint FK → users.id",
+          "purpose": "",
+          "sql_type": "bigint"
+        },
+        {
+          "name": "restaurant_id",
+          "definition": "bigint FK → restaurants.id",
+          "purpose": "",
+          "sql_type": "bigint"
+        },
+        {
+          "name": "status",
+          "definition": "varchar(20)",
+          "purpose": "",
+          "sql_type": "varchar(20)"
+        },
+        {
+          "name": "expires_at",
+          "definition": "timestamptz NULL",
+          "purpose": "",
+          "sql_type": "timestamptz"
+        },
+        {
+          "name": "created_at",
+          "definition": "timestamptz NOT NULL DEFAULT now()",
+          "purpose": "",
+          "sql_type": "timestamptz"
+        },
+        {
+          "name": "updated_at",
+          "definition": "timestamptz NOT NULL DEFAULT now() (update via trigger/application)",
+          "purpose": "",
+          "sql_type": "timestamptz"
+        },
+        {
+          "name": "deleted_at",
+          "definition": "timestamptz NULL (soft deletion)",
+          "purpose": "",
+          "sql_type": "timestamptz"
+        }
+      ],
+      "source": "Yember_Architecture_and_Database_Schemas_Detailed_Flows (1).docx"
+    },
+    {
+      "table": "cart_items",
+      "columns": [
+        {
+          "name": "id",
+          "definition": "bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY",
+          "purpose": "",
+          "sql_type": "bigint"
+        },
+        {
+          "name": "uuid",
+          "definition": "uuid NOT NULL UNIQUE DEFAULT gen_random_uuid()",
+          "purpose": "",
+          "sql_type": "uuid"
+        },
+        {
+          "name": "cart_id",
+          "definition": "bigint FK → carts.id",
+          "purpose": "",
+          "sql_type": "bigint"
+        },
+        {
+          "name": "menu_item_id",
+          "definition": "bigint FK → menu_items.id",
+          "purpose": "",
+          "sql_type": "bigint"
+        },
+        {
+          "name": "variant_id",
+          "definition": "bigint FK → item_variants.id NULL",
+          "purpose": "",
+          "sql_type": "bigint"
+        },
+        {
+          "name": "quantity",
+          "definition": "int",
+          "purpose": "",
+          "sql_type": "int"
+        },
+        {
+          "name": "special_instructions",
+          "definition": "text NULL",
+          "purpose": "",
+          "sql_type": "text"
+        },
+        {
+          "name": "created_at",
+          "definition": "timestamptz NOT NULL DEFAULT now()",
+          "purpose": "",
+          "sql_type": "timestamptz"
+        },
+        {
+          "name": "updated_at",
+          "definition": "timestamptz NOT NULL DEFAULT now() (update via trigger/application)",
+          "purpose": "",
+          "sql_type": "timestamptz"
+        },
+        {
+          "name": "deleted_at",
+          "definition": "timestamptz NULL (soft deletion)",
+          "purpose": "",
+          "sql_type": "timestamptz"
+        }
+      ],
+      "source": "Yember_Architecture_and_Database_Schemas_Detailed_Flows (1).docx"
+    },
+    {
+      "table": "orders",
+      "columns": [
+        {
+          "name": "id",
+          "definition": "bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY",
+          "purpose": "",
+          "sql_type": "bigint"
+        },
+        {
+          "name": "uuid",
+          "definition": "uuid NOT NULL UNIQUE DEFAULT gen_random_uuid()",
+          "purpose": "",
+          "sql_type": "uuid"
+        },
+        {
+          "name": "order_number",
+          "definition": "varchar(40) UNIQUE",
+          "purpose": "",
+          "sql_type": "varchar(40)"
+        },
+        {
+          "name": "user_id",
+          "definition": "bigint FK → users.id",
+          "purpose": "",
+          "sql_type": "bigint"
+        },
+        {
+          "name": "restaurant_id",
+          "definition": "bigint FK → restaurants.id",
+          "purpose": "",
+          "sql_type": "bigint"
+        },
+        {
+          "name": "address_id",
+          "definition": "bigint FK → user_addresses.id NULL",
+          "purpose": "",
+          "sql_type": "bigint"
+        },
+        {
+          "name": "status",
+          "definition": "varchar(30)",
+          "purpose": "",
+          "sql_type": "varchar(30)"
+        },
+        {
+          "name": "subtotal",
+          "definition": "numeric(12,2)",
+          "purpose": "",
+          "sql_type": "numeric(12,2)"
+        },
+        {
+          "name": "delivery_fee",
+          "definition": "numeric(12,2)",
+          "purpose": "",
+          "sql_type": "numeric(12,2)"
+        },
+        {
+          "name": "tax_amount",
+          "definition": "numeric(12,2)",
+          "purpose": "",
+          "sql_type": "numeric(12,2)"
+        },
+        {
+          "name": "discount_amount",
+          "definition": "numeric(12,2)",
+          "purpose": "",
+          "sql_type": "numeric(12,2)"
+        },
+        {
+          "name": "total_amount",
+          "definition": "numeric(12,2)",
+          "purpose": "",
+          "sql_type": "numeric(12,2)"
+        },
+        {
+          "name": "currency",
+          "definition": "char(3)",
+          "purpose": "",
+          "sql_type": "char(3)"
+        },
+        {
+          "name": "placed_at",
+          "definition": "timestamptz",
+          "purpose": "",
+          "sql_type": "timestamptz"
+        },
+        {
+          "name": "created_at",
+          "definition": "timestamptz NOT NULL DEFAULT now()",
+          "purpose": "",
+          "sql_type": "timestamptz"
+        },
+        {
+          "name": "updated_at",
+          "definition": "timestamptz NOT NULL DEFAULT now() (update via trigger/application)",
+          "purpose": "",
+          "sql_type": "timestamptz"
+        },
+        {
+          "name": "deleted_at",
+          "definition": "timestamptz NULL (soft deletion)",
+          "purpose": "",
+          "sql_type": "timestamptz"
+        }
+      ],
+      "source": "Yember_Architecture_and_Database_Schemas_Detailed_Flows (1).docx"
+    },
+    {
+      "table": "order_items",
+      "columns": [
+        {
+          "name": "id",
+          "definition": "bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY",
+          "purpose": "",
+          "sql_type": "bigint"
+        },
+        {
+          "name": "uuid",
+          "definition": "uuid NOT NULL UNIQUE DEFAULT gen_random_uuid()",
+          "purpose": "",
+          "sql_type": "uuid"
+        },
+        {
+          "name": "order_id",
+          "definition": "bigint FK → orders.id",
+          "purpose": "",
+          "sql_type": "bigint"
+        },
+        {
+          "name": "menu_item_id",
+          "definition": "bigint FK → menu_items.id NULL",
+          "purpose": "",
+          "sql_type": "bigint"
+        },
+        {
+          "name": "variant_id",
+          "definition": "bigint FK → item_variants.id NULL",
+          "purpose": "",
+          "sql_type": "bigint"
+        },
+        {
+          "name": "quantity",
+          "definition": "int",
+          "purpose": "",
+          "sql_type": "int"
+        },
+        {
+          "name": "unit_price",
+          "definition": "numeric(12,2)",
+          "purpose": "",
+          "sql_type": "numeric(12,2)"
+        },
+        {
+          "name": "special_instructions",
+          "definition": "text NULL",
+          "purpose": "",
+          "sql_type": "text"
+        },
+        {
+          "name": "created_at",
+          "definition": "timestamptz NOT NULL DEFAULT now()",
+          "purpose": "",
+          "sql_type": "timestamptz"
+        },
+        {
+          "name": "updated_at",
+          "definition": "timestamptz NOT NULL DEFAULT now() (update via trigger/application)",
+          "purpose": "",
+          "sql_type": "timestamptz"
+        },
+        {
+          "name": "deleted_at",
+          "definition": "timestamptz NULL (soft deletion)",
+          "purpose": "",
+          "sql_type": "timestamptz"
+        }
+      ],
+      "source": "Yember_Architecture_and_Database_Schemas_Detailed_Flows (1).docx"
+    },
+    {
+      "table": "order_status_history",
+      "columns": [
+        {
+          "name": "id",
+          "definition": "bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY",
+          "purpose": "",
+          "sql_type": "bigint"
+        },
+        {
+          "name": "uuid",
+          "definition": "uuid NOT NULL UNIQUE DEFAULT gen_random_uuid()",
+          "purpose": "",
+          "sql_type": "uuid"
+        },
+        {
+          "name": "order_id",
+          "definition": "bigint FK → orders.id",
+          "purpose": "",
+          "sql_type": "bigint"
+        },
+        {
+          "name": "from_status",
+          "definition": "varchar(30) NULL",
+          "purpose": "",
+          "sql_type": "varchar(30)"
+        },
+        {
+          "name": "to_status",
+          "definition": "varchar(30)",
+          "purpose": "",
+          "sql_type": "varchar(30)"
+        },
+        {
+          "name": "changed_by",
+          "definition": "bigint FK → users.id NULL",
+          "purpose": "",
+          "sql_type": "bigint"
+        },
+        {
+          "name": "changed_at",
+          "definition": "timestamptz",
+          "purpose": "",
+          "sql_type": "timestamptz"
+        },
+        {
+          "name": "note",
+          "definition": "text NULL",
+          "purpose": "",
+          "sql_type": "text"
+        },
+        {
+          "name": "created_at",
+          "definition": "timestamptz NOT NULL DEFAULT now()",
+          "purpose": "",
+          "sql_type": "timestamptz"
+        },
+        {
+          "name": "updated_at",
+          "definition": "timestamptz NOT NULL DEFAULT now() (update via trigger/application)",
+          "purpose": "",
+          "sql_type": "timestamptz"
+        },
+        {
+          "name": "deleted_at",
+          "definition": "timestamptz NULL (soft deletion)",
+          "purpose": "",
+          "sql_type": "timestamptz"
+        }
+      ],
+      "source": "Yember_Architecture_and_Database_Schemas_Detailed_Flows (1).docx"
+    },
+    {
+      "table": "riders",
+      "columns": [
+        {
+          "name": "id",
+          "definition": "bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY",
+          "purpose": "",
+          "sql_type": "bigint"
+        },
+        {
+          "name": "uuid",
+          "definition": "uuid NOT NULL UNIQUE DEFAULT gen_random_uuid()",
+          "purpose": "",
+          "sql_type": "uuid"
+        },
+        {
+          "name": "user_id",
+          "definition": "bigint FK → users.id UNIQUE",
+          "purpose": "",
+          "sql_type": "bigint"
+        },
+        {
+          "name": "station_id",
+          "definition": "bigint FK → stations.id NULL",
+          "purpose": "",
+          "sql_type": "bigint"
+        },
+        {
+          "name": "vehicle_type",
+          "definition": "varchar(50)",
+          "purpose": "",
+          "sql_type": "varchar(50)"
+        },
+        {
+          "name": "verification_status",
+          "definition": "varchar(30)",
+          "purpose": "",
+          "sql_type": "varchar(30)"
+        },
+        {
+          "name": "availability_status",
+          "definition": "varchar(30)",
+          "purpose": "",
+          "sql_type": "varchar(30)"
+        },
+        {
+          "name": "approved_by",
+          "definition": "bigint FK → users.id NULL",
+          "purpose": "",
+          "sql_type": "bigint"
+        },
+        {
+          "name": "created_at",
+          "definition": "timestamptz NOT NULL DEFAULT now()",
+          "purpose": "",
+          "sql_type": "timestamptz"
+        },
+        {
+          "name": "updated_at",
+          "definition": "timestamptz NOT NULL DEFAULT now() (update via trigger/application)",
+          "purpose": "",
+          "sql_type": "timestamptz"
+        },
+        {
+          "name": "deleted_at",
+          "definition": "timestamptz NULL (soft deletion)",
+          "purpose": "",
+          "sql_type": "timestamptz"
+        }
+      ],
+      "source": "Yember_Architecture_and_Database_Schemas_Detailed_Flows (1).docx"
+    },
+    {
+      "table": "rider_documents",
+      "columns": [
+        {
+          "name": "id",
+          "definition": "bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY",
+          "purpose": "",
+          "sql_type": "bigint"
+        },
+        {
+          "name": "uuid",
+          "definition": "uuid NOT NULL UNIQUE DEFAULT gen_random_uuid()",
+          "purpose": "",
+          "sql_type": "uuid"
+        },
+        {
+          "name": "rider_id",
+          "definition": "bigint FK → riders.id",
+          "purpose": "",
+          "sql_type": "bigint"
+        },
+        {
+          "name": "document_type",
+          "definition": "varchar(50)",
+          "purpose": "",
+          "sql_type": "varchar(50)"
+        },
+        {
+          "name": "file_url",
+          "definition": "text",
+          "purpose": "",
+          "sql_type": "text"
+        },
+        {
+          "name": "verification_status",
+          "definition": "varchar(30)",
+          "purpose": "",
+          "sql_type": "varchar(30)"
+        },
+        {
+          "name": "verified_at",
+          "definition": "timestamptz NULL",
+          "purpose": "",
+          "sql_type": "timestamptz"
+        },
+        {
+          "name": "created_at",
+          "definition": "timestamptz NOT NULL DEFAULT now()",
+          "purpose": "",
+          "sql_type": "timestamptz"
+        },
+        {
+          "name": "updated_at",
+          "definition": "timestamptz NOT NULL DEFAULT now() (update via trigger/application)",
+          "purpose": "",
+          "sql_type": "timestamptz"
+        },
+        {
+          "name": "deleted_at",
+          "definition": "timestamptz NULL (soft deletion)",
+          "purpose": "",
+          "sql_type": "timestamptz"
+        }
+      ],
+      "source": "Yember_Architecture_and_Database_Schemas_Detailed_Flows (1).docx"
+    },
+    {
+      "table": "delivery_agent_bank_details",
+      "columns": [
+        {
+          "name": "id",
+          "definition": "bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY",
+          "purpose": "",
+          "sql_type": "bigint"
+        },
+        {
+          "name": "uuid",
+          "definition": "uuid NOT NULL UNIQUE DEFAULT gen_random_uuid()",
+          "purpose": "",
+          "sql_type": "uuid"
+        },
+        {
+          "name": "rider_id",
+          "definition": "bigint FK → riders.id",
+          "purpose": "",
+          "sql_type": "bigint"
+        },
+        {
+          "name": "account_holder",
+          "definition": "varchar(160)",
+          "purpose": "",
+          "sql_type": "varchar(160)"
+        },
+        {
+          "name": "account_number_encrypted",
+          "definition": "text",
+          "purpose": "",
+          "sql_type": "text"
+        },
+        {
+          "name": "bank_name",
+          "definition": "varchar(160)",
+          "purpose": "",
+          "sql_type": "varchar(160)"
+        },
+        {
+          "name": "ifsc",
+          "definition": "varchar(30) NULL",
+          "purpose": "",
+          "sql_type": "varchar(30)"
+        },
+        {
+          "name": "verification_status",
+          "definition": "varchar(30)",
+          "purpose": "",
+          "sql_type": "varchar(30)"
+        },
+        {
+          "name": "created_at",
+          "definition": "timestamptz NOT NULL DEFAULT now()",
+          "purpose": "",
+          "sql_type": "timestamptz"
+        },
+        {
+          "name": "updated_at",
+          "definition": "timestamptz NOT NULL DEFAULT now() (update via trigger/application)",
+          "purpose": "",
+          "sql_type": "timestamptz"
+        },
+        {
+          "name": "deleted_at",
+          "definition": "timestamptz NULL (soft deletion)",
+          "purpose": "",
+          "sql_type": "timestamptz"
+        }
+      ],
+      "source": "Yember_Architecture_and_Database_Schemas_Detailed_Flows (1).docx"
+    },
+    {
+      "table": "delivery_assignments",
+      "columns": [
+        {
+          "name": "id",
+          "definition": "bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY",
+          "purpose": "",
+          "sql_type": "bigint"
+        },
+        {
+          "name": "uuid",
+          "definition": "uuid NOT NULL UNIQUE DEFAULT gen_random_uuid()",
+          "purpose": "",
+          "sql_type": "uuid"
+        },
+        {
+          "name": "order_id",
+          "definition": "bigint FK → orders.id",
+          "purpose": "",
+          "sql_type": "bigint"
+        },
+        {
+          "name": "rider_id",
+          "definition": "bigint FK → riders.id",
+          "purpose": "",
+          "sql_type": "bigint"
+        },
+        {
+          "name": "status",
+          "definition": "varchar(30)",
+          "purpose": "",
+          "sql_type": "varchar(30)"
+        },
+        {
+          "name": "assigned_at",
+          "definition": "timestamptz",
+          "purpose": "",
+          "sql_type": "timestamptz"
+        },
+        {
+          "name": "accepted_at",
+          "definition": "timestamptz NULL",
+          "purpose": "",
+          "sql_type": "timestamptz"
+        },
+        {
+          "name": "picked_up_at",
+          "definition": "timestamptz NULL",
+          "purpose": "",
+          "sql_type": "timestamptz"
+        },
+        {
+          "name": "delivered_at",
+          "definition": "timestamptz NULL",
+          "purpose": "",
+          "sql_type": "timestamptz"
+        },
+        {
+          "name": "created_at",
+          "definition": "timestamptz NOT NULL DEFAULT now()",
+          "purpose": "",
+          "sql_type": "timestamptz"
+        },
+        {
+          "name": "updated_at",
+          "definition": "timestamptz NOT NULL DEFAULT now() (update via trigger/application)",
+          "purpose": "",
+          "sql_type": "timestamptz"
+        },
+        {
+          "name": "deleted_at",
+          "definition": "timestamptz NULL (soft deletion)",
+          "purpose": "",
+          "sql_type": "timestamptz"
+        }
+      ],
+      "source": "Yember_Architecture_and_Database_Schemas_Detailed_Flows (1).docx"
+    },
+    {
+      "table": "rider_locations",
+      "columns": [
+        {
+          "name": "id",
+          "definition": "bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY",
+          "purpose": "",
+          "sql_type": "bigint"
+        },
+        {
+          "name": "uuid",
+          "definition": "uuid NOT NULL UNIQUE DEFAULT gen_random_uuid()",
+          "purpose": "",
+          "sql_type": "uuid"
+        },
+        {
+          "name": "rider_id",
+          "definition": "bigint FK → riders.id",
+          "purpose": "",
+          "sql_type": "bigint"
+        },
+        {
+          "name": "latitude",
+          "definition": "numeric(10,7)",
+          "purpose": "",
+          "sql_type": "numeric(10,7)"
+        },
+        {
+          "name": "longitude",
+          "definition": "numeric(10,7)",
+          "purpose": "",
+          "sql_type": "numeric(10,7)"
+        },
+        {
+          "name": "recorded_at",
+          "definition": "timestamptz",
+          "purpose": "",
+          "sql_type": "timestamptz"
+        },
+        {
+          "name": "created_at",
+          "definition": "timestamptz NOT NULL DEFAULT now()",
+          "purpose": "",
+          "sql_type": "timestamptz"
+        },
+        {
+          "name": "updated_at",
+          "definition": "timestamptz NOT NULL DEFAULT now() (update via trigger/application)",
+          "purpose": "",
+          "sql_type": "timestamptz"
+        },
+        {
+          "name": "deleted_at",
+          "definition": "timestamptz NULL (soft deletion)",
+          "purpose": "",
+          "sql_type": "timestamptz"
+        }
+      ],
+      "source": "Yember_Architecture_and_Database_Schemas_Detailed_Flows (1).docx"
+    },
+    {
+      "table": "payment_intents",
+      "columns": [
+        {
+          "name": "id",
+          "definition": "BIGINT PK",
+          "purpose": "Internal numeric primary key",
+          "sql_type": "bigint"
+        },
+        {
+          "name": "uuid",
+          "definition": "UUID UNIQUE",
+          "purpose": "Public-facing identifier",
+          "sql_type": "uuid"
+        },
+        {
+          "name": "created_at",
+          "definition": "TIMESTAMPTZ",
+          "purpose": "Creation time",
+          "sql_type": "timestamptz"
+        },
+        {
+          "name": "updated_at",
+          "definition": "TIMESTAMPTZ",
+          "purpose": "Last update time",
+          "sql_type": "timestamptz"
+        },
+        {
+          "name": "deleted_at",
+          "definition": "TIMESTAMPTZ NULL",
+          "purpose": "Soft deletion timestamp",
+          "sql_type": "timestamptz"
+        },
+        {
+          "name": "order_id",
+          "definition": "BIGINT FK NULL",
+          "purpose": "orders.id; mutually exclusive with registration reference",
+          "sql_type": "bigint"
+        },
+        {
+          "name": "restaurant_id",
+          "definition": "BIGINT FK NULL",
+          "purpose": "Restaurant registration reference",
+          "sql_type": "bigint"
+        },
+        {
+          "name": "delivery_agent_id",
+          "definition": "BIGINT FK NULL",
+          "purpose": "Agent registration reference",
+          "sql_type": "bigint"
+        },
+        {
+          "name": "purpose",
+          "definition": "VARCHAR(32)",
+          "purpose": "ORDER / RESTAURANT_REGISTRATION / AGENT_REGISTRATION",
+          "sql_type": "varchar(32)"
+        },
+        {
+          "name": "method",
+          "definition": "VARCHAR(24)",
+          "purpose": "RAZORPAY / PAY_ON_DELIVERY",
+          "sql_type": "varchar(24)"
+        },
+        {
+          "name": "stage",
+          "definition": "VARCHAR(24)",
+          "purpose": "CHECKOUT / DOORSTEP / REGISTRATION",
+          "sql_type": "varchar(24)"
+        },
+        {
+          "name": "amount_paise",
+          "definition": "BIGINT",
+          "purpose": "Amount expected",
+          "sql_type": "bigint"
+        },
+        {
+          "name": "currency",
+          "definition": "CHAR(3)",
+          "purpose": "INR",
+          "sql_type": "char(3)"
+        },
+        {
+          "name": "status",
+          "definition": "VARCHAR(24)",
+          "purpose": "CREATED / PENDING / SUCCEEDED / FAILED / CANCELLED",
+          "sql_type": "varchar(24)"
+        },
+        {
+          "name": "provider_order_id",
+          "definition": "VARCHAR(120) NULL",
+          "purpose": "Razorpay order id",
+          "sql_type": "varchar(120)"
+        },
+        {
+          "name": "idempotency_key",
+          "definition": "VARCHAR(120)",
+          "purpose": "Unique request key",
+          "sql_type": "varchar(120)"
+        },
+        {
+          "name": "expires_at",
+          "definition": "TIMESTAMPTZ NULL",
+          "purpose": "Payment intent expiry",
+          "sql_type": "timestamptz"
+        }
+      ],
+      "source": "Yember_Payments_and_Activity_Logs_Architecture.docx"
+    },
+    {
+      "table": "payments",
+      "columns": [
+        {
+          "name": "id",
+          "definition": "BIGINT PK",
+          "purpose": "Internal numeric primary key",
+          "sql_type": "bigint"
+        },
+        {
+          "name": "uuid",
+          "definition": "UUID UNIQUE",
+          "purpose": "Public-facing identifier",
+          "sql_type": "uuid"
+        },
+        {
+          "name": "created_at",
+          "definition": "TIMESTAMPTZ",
+          "purpose": "Creation time",
+          "sql_type": "timestamptz"
+        },
+        {
+          "name": "updated_at",
+          "definition": "TIMESTAMPTZ",
+          "purpose": "Last update time",
+          "sql_type": "timestamptz"
+        },
+        {
+          "name": "deleted_at",
+          "definition": "TIMESTAMPTZ NULL",
+          "purpose": "Soft deletion timestamp",
+          "sql_type": "timestamptz"
+        },
+        {
+          "name": "payment_intent_id",
+          "definition": "BIGINT FK",
+          "purpose": "payment_intents.id",
+          "sql_type": "bigint"
+        },
+        {
+          "name": "order_id",
+          "definition": "BIGINT FK NULL",
+          "purpose": "orders.id",
+          "sql_type": "bigint"
+        },
+        {
+          "name": "provider",
+          "definition": "VARCHAR(24)",
+          "purpose": "RAZORPAY / CASH",
+          "sql_type": "varchar(24)"
+        },
+        {
+          "name": "provider_payment_id",
+          "definition": "VARCHAR(120) NULL",
+          "purpose": "Unique when present",
+          "sql_type": "varchar(120)"
+        },
+        {
+          "name": "method",
+          "definition": "VARCHAR(32)",
+          "purpose": "UPI / CARD / NETBANKING / CASH / OTHER",
+          "sql_type": "varchar(32)"
+        },
+        {
+          "name": "amount_paise",
+          "definition": "BIGINT",
+          "purpose": "Actual collected",
+          "sql_type": "bigint"
+        },
+        {
+          "name": "currency",
+          "definition": "CHAR(3)",
+          "purpose": "INR",
+          "sql_type": "char(3)"
+        },
+        {
+          "name": "status",
+          "definition": "VARCHAR(24)",
+          "purpose": "AUTHORIZED / CAPTURED / FAILED / REFUNDED",
+          "sql_type": "varchar(24)"
+        },
+        {
+          "name": "received_by",
+          "definition": "VARCHAR(24)",
+          "purpose": "YEMBER / DELIVERY_AGENT",
+          "sql_type": "varchar(24)"
+        },
+        {
+          "name": "captured_at",
+          "definition": "TIMESTAMPTZ NULL",
+          "purpose": "Verified capture time",
+          "sql_type": "timestamptz"
+        }
+      ],
+      "source": "Yember_Payments_and_Activity_Logs_Architecture.docx"
+    },
+    {
+      "table": "registration_fees",
+      "columns": [
+        {
+          "name": "id",
+          "definition": "BIGINT PK",
+          "purpose": "Internal numeric primary key",
+          "sql_type": "bigint"
+        },
+        {
+          "name": "uuid",
+          "definition": "UUID UNIQUE",
+          "purpose": "Public-facing identifier",
+          "sql_type": "uuid"
+        },
+        {
+          "name": "created_at",
+          "definition": "TIMESTAMPTZ",
+          "purpose": "Creation time",
+          "sql_type": "timestamptz"
+        },
+        {
+          "name": "updated_at",
+          "definition": "TIMESTAMPTZ",
+          "purpose": "Last update time",
+          "sql_type": "timestamptz"
+        },
+        {
+          "name": "deleted_at",
+          "definition": "TIMESTAMPTZ NULL",
+          "purpose": "Soft deletion timestamp",
+          "sql_type": "timestamptz"
+        },
+        {
+          "name": "restaurant_id",
+          "definition": "BIGINT FK NULL",
+          "purpose": "restaurants.id",
+          "sql_type": "bigint"
+        },
+        {
+          "name": "delivery_agent_id",
+          "definition": "BIGINT FK NULL",
+          "purpose": "delivery_agents.id",
+          "sql_type": "bigint"
+        },
+        {
+          "name": "amount_paise",
+          "definition": "BIGINT",
+          "purpose": "Fee due",
+          "sql_type": "bigint"
+        },
+        {
+          "name": "currency",
+          "definition": "CHAR(3)",
+          "purpose": "INR",
+          "sql_type": "char(3)"
+        },
+        {
+          "name": "payment_intent_id",
+          "definition": "BIGINT FK NULL",
+          "purpose": "payment_intents.id",
+          "sql_type": "bigint"
+        },
+        {
+          "name": "status",
+          "definition": "VARCHAR(24)",
+          "purpose": "DUE / PAID / WAIVED / REFUNDED",
+          "sql_type": "varchar(24)"
+        },
+        {
+          "name": "paid_at",
+          "definition": "TIMESTAMPTZ NULL",
+          "purpose": "Verified paid time",
+          "sql_type": "timestamptz"
+        }
+      ],
+      "source": "Yember_Payments_and_Activity_Logs_Architecture.docx"
+    },
+    {
+      "table": "restaurant_earnings",
+      "columns": [
+        {
+          "name": "id",
+          "definition": "BIGINT PK",
+          "purpose": "Internal numeric primary key",
+          "sql_type": "bigint"
+        },
+        {
+          "name": "uuid",
+          "definition": "UUID UNIQUE",
+          "purpose": "Public-facing identifier",
+          "sql_type": "uuid"
+        },
+        {
+          "name": "created_at",
+          "definition": "TIMESTAMPTZ",
+          "purpose": "Creation time",
+          "sql_type": "timestamptz"
+        },
+        {
+          "name": "updated_at",
+          "definition": "TIMESTAMPTZ",
+          "purpose": "Last update time",
+          "sql_type": "timestamptz"
+        },
+        {
+          "name": "deleted_at",
+          "definition": "TIMESTAMPTZ NULL",
+          "purpose": "Soft deletion timestamp",
+          "sql_type": "timestamptz"
+        },
+        {
+          "name": "restaurant_id",
+          "definition": "BIGINT FK",
+          "purpose": "restaurants.id",
+          "sql_type": "bigint"
+        },
+        {
+          "name": "order_id",
+          "definition": "BIGINT FK",
+          "purpose": "orders.id",
+          "sql_type": "bigint"
+        },
+        {
+          "name": "gross_amount_paise",
+          "definition": "BIGINT",
+          "purpose": "Eligible food amount",
+          "sql_type": "bigint"
+        },
+        {
+          "name": "fee_amount_paise",
+          "definition": "BIGINT",
+          "purpose": "Yember fees",
+          "sql_type": "bigint"
+        },
+        {
+          "name": "adjustment_amount_paise",
+          "definition": "BIGINT",
+          "purpose": "Signed adjustments",
+          "sql_type": "bigint"
+        },
+        {
+          "name": "net_amount_paise",
+          "definition": "BIGINT",
+          "purpose": "Restaurant amount owed",
+          "sql_type": "bigint"
+        },
+        {
+          "name": "status",
+          "definition": "VARCHAR(24)",
+          "purpose": "PENDING / AVAILABLE / HELD / SETTLED / REVERSED",
+          "sql_type": "varchar(24)"
+        },
+        {
+          "name": "eligible_at",
+          "definition": "TIMESTAMPTZ NULL",
+          "purpose": "When available",
+          "sql_type": "timestamptz"
+        }
+      ],
+      "source": "Yember_Payments_and_Activity_Logs_Architecture.docx"
+    },
+    {
+      "table": "delivery_agent_earnings",
+      "columns": [
+        {
+          "name": "id",
+          "definition": "BIGINT PK",
+          "purpose": "Internal numeric primary key",
+          "sql_type": "bigint"
+        },
+        {
+          "name": "uuid",
+          "definition": "UUID UNIQUE",
+          "purpose": "Public-facing identifier",
+          "sql_type": "uuid"
+        },
+        {
+          "name": "created_at",
+          "definition": "TIMESTAMPTZ",
+          "purpose": "Creation time",
+          "sql_type": "timestamptz"
+        },
+        {
+          "name": "updated_at",
+          "definition": "TIMESTAMPTZ",
+          "purpose": "Last update time",
+          "sql_type": "timestamptz"
+        },
+        {
+          "name": "deleted_at",
+          "definition": "TIMESTAMPTZ NULL",
+          "purpose": "Soft deletion timestamp",
+          "sql_type": "timestamptz"
+        },
+        {
+          "name": "delivery_agent_id",
+          "definition": "BIGINT FK",
+          "purpose": "delivery_agents.id",
+          "sql_type": "bigint"
+        },
+        {
+          "name": "order_id",
+          "definition": "BIGINT FK",
+          "purpose": "orders.id",
+          "sql_type": "bigint"
+        },
+        {
+          "name": "base_amount_paise",
+          "definition": "BIGINT",
+          "purpose": "Delivery compensation",
+          "sql_type": "bigint"
+        },
+        {
+          "name": "incentive_amount_paise",
+          "definition": "BIGINT",
+          "purpose": "Incentives",
+          "sql_type": "bigint"
+        },
+        {
+          "name": "adjustment_amount_paise",
+          "definition": "BIGINT",
+          "purpose": "Signed adjustments",
+          "sql_type": "bigint"
+        },
+        {
+          "name": "net_amount_paise",
+          "definition": "BIGINT",
+          "purpose": "Agent amount owed",
+          "sql_type": "bigint"
+        },
+        {
+          "name": "status",
+          "definition": "VARCHAR(24)",
+          "purpose": "PENDING / AVAILABLE / HELD / SETTLED / REVERSED",
+          "sql_type": "varchar(24)"
+        },
+        {
+          "name": "eligible_at",
+          "definition": "TIMESTAMPTZ NULL",
+          "purpose": "When available",
+          "sql_type": "timestamptz"
+        }
+      ],
+      "source": "Yember_Payments_and_Activity_Logs_Architecture.docx"
+    },
+    {
+      "table": "restaurant_payouts",
+      "columns": [
+        {
+          "name": "id",
+          "definition": "BIGINT PK",
+          "purpose": "Internal numeric primary key",
+          "sql_type": "bigint"
+        },
+        {
+          "name": "uuid",
+          "definition": "UUID UNIQUE",
+          "purpose": "Public-facing identifier",
+          "sql_type": "uuid"
+        },
+        {
+          "name": "created_at",
+          "definition": "TIMESTAMPTZ",
+          "purpose": "Creation time",
+          "sql_type": "timestamptz"
+        },
+        {
+          "name": "updated_at",
+          "definition": "TIMESTAMPTZ",
+          "purpose": "Last update time",
+          "sql_type": "timestamptz"
+        },
+        {
+          "name": "deleted_at",
+          "definition": "TIMESTAMPTZ NULL",
+          "purpose": "Soft deletion timestamp",
+          "sql_type": "timestamptz"
+        },
+        {
+          "name": "restaurant_id",
+          "definition": "BIGINT FK",
+          "purpose": "restaurants.id",
+          "sql_type": "bigint"
+        },
+        {
+          "name": "delivery_agent_id",
+          "definition": "BIGINT FK NULL",
+          "purpose": "Agent for cash handover",
+          "sql_type": "bigint"
+        },
+        {
+          "name": "order_id",
+          "definition": "BIGINT FK NULL",
+          "purpose": "Required for order cash handover",
+          "sql_type": "bigint"
+        },
+        {
+          "name": "method",
+          "definition": "VARCHAR(32)",
+          "purpose": "BANK_TRANSFER / CASH_HANDOVER",
+          "sql_type": "varchar(32)"
+        },
+        {
+          "name": "amount_paise",
+          "definition": "BIGINT",
+          "purpose": "Settled amount",
+          "sql_type": "bigint"
+        },
+        {
+          "name": "status",
+          "definition": "VARCHAR(24)",
+          "purpose": "PENDING / PROCESSING / PAID / FAILED / DISPUTED",
+          "sql_type": "varchar(24)"
+        },
+        {
+          "name": "provider_transfer_id",
+          "definition": "VARCHAR(120) NULL",
+          "purpose": "Bank transfer reference",
+          "sql_type": "varchar(120)"
+        },
+        {
+          "name": "confirmed_by_restaurant_at",
+          "definition": "TIMESTAMPTZ NULL",
+          "purpose": "Cash handover acceptance",
+          "sql_type": "timestamptz"
+        },
+        {
+          "name": "paid_at",
+          "definition": "TIMESTAMPTZ NULL",
+          "purpose": "Settlement time",
+          "sql_type": "timestamptz"
+        }
+      ],
+      "source": "Yember_Payments_and_Activity_Logs_Architecture.docx"
+    },
+    {
+      "table": "delivery_agent_payouts",
+      "columns": [
+        {
+          "name": "id",
+          "definition": "BIGINT PK",
+          "purpose": "Internal numeric primary key",
+          "sql_type": "bigint"
+        },
+        {
+          "name": "uuid",
+          "definition": "UUID UNIQUE",
+          "purpose": "Public-facing identifier",
+          "sql_type": "uuid"
+        },
+        {
+          "name": "created_at",
+          "definition": "TIMESTAMPTZ",
+          "purpose": "Creation time",
+          "sql_type": "timestamptz"
+        },
+        {
+          "name": "updated_at",
+          "definition": "TIMESTAMPTZ",
+          "purpose": "Last update time",
+          "sql_type": "timestamptz"
+        },
+        {
+          "name": "deleted_at",
+          "definition": "TIMESTAMPTZ NULL",
+          "purpose": "Soft deletion timestamp",
+          "sql_type": "timestamptz"
+        },
+        {
+          "name": "delivery_agent_id",
+          "definition": "BIGINT FK",
+          "purpose": "delivery_agents.id",
+          "sql_type": "bigint"
+        },
+        {
+          "name": "bank_details_id",
+          "definition": "BIGINT FK NULL",
+          "purpose": "delivery_agent_bank_details.id",
+          "sql_type": "bigint"
+        },
+        {
+          "name": "method",
+          "definition": "VARCHAR(24)",
+          "purpose": "BANK_TRANSFER",
+          "sql_type": "varchar(24)"
+        },
+        {
+          "name": "amount_paise",
+          "definition": "BIGINT",
+          "purpose": "Amount disbursed",
+          "sql_type": "bigint"
+        },
+        {
+          "name": "status",
+          "definition": "VARCHAR(24)",
+          "purpose": "PENDING / PROCESSING / PAID / FAILED",
+          "sql_type": "varchar(24)"
+        },
+        {
+          "name": "provider_transfer_id",
+          "definition": "VARCHAR(120) NULL",
+          "purpose": "Transfer reference",
+          "sql_type": "varchar(120)"
+        },
+        {
+          "name": "paid_at",
+          "definition": "TIMESTAMPTZ NULL",
+          "purpose": "Confirmed settlement",
+          "sql_type": "timestamptz"
+        }
+      ],
+      "source": "Yember_Payments_and_Activity_Logs_Architecture.docx"
+    },
+    {
+      "table": "restaurant_payout_allocations",
+      "columns": [
+        {
+          "name": "id",
+          "definition": "BIGINT PK",
+          "purpose": "Internal numeric primary key",
+          "sql_type": "bigint"
+        },
+        {
+          "name": "uuid",
+          "definition": "UUID UNIQUE",
+          "purpose": "Public-facing identifier",
+          "sql_type": "uuid"
+        },
+        {
+          "name": "created_at",
+          "definition": "TIMESTAMPTZ",
+          "purpose": "Creation time",
+          "sql_type": "timestamptz"
+        },
+        {
+          "name": "updated_at",
+          "definition": "TIMESTAMPTZ",
+          "purpose": "Last update time",
+          "sql_type": "timestamptz"
+        },
+        {
+          "name": "deleted_at",
+          "definition": "TIMESTAMPTZ NULL",
+          "purpose": "Soft deletion timestamp",
+          "sql_type": "timestamptz"
+        },
+        {
+          "name": "restaurant_payout_id",
+          "definition": "BIGINT FK",
+          "purpose": "restaurant_payouts.id",
+          "sql_type": "bigint"
+        },
+        {
+          "name": "restaurant_earning_id",
+          "definition": "BIGINT FK",
+          "purpose": "restaurant_earnings.id",
+          "sql_type": "bigint"
+        },
+        {
+          "name": "amount_paise",
+          "definition": "BIGINT",
+          "purpose": "Amount applied",
+          "sql_type": "bigint"
+        }
+      ],
+      "source": "Yember_Payments_and_Activity_Logs_Architecture.docx"
+    },
+    {
+      "table": "delivery_agent_payout_allocations",
+      "columns": [
+        {
+          "name": "id",
+          "definition": "BIGINT PK",
+          "purpose": "Internal numeric primary key",
+          "sql_type": "bigint"
+        },
+        {
+          "name": "uuid",
+          "definition": "UUID UNIQUE",
+          "purpose": "Public-facing identifier",
+          "sql_type": "uuid"
+        },
+        {
+          "name": "created_at",
+          "definition": "TIMESTAMPTZ",
+          "purpose": "Creation time",
+          "sql_type": "timestamptz"
+        },
+        {
+          "name": "updated_at",
+          "definition": "TIMESTAMPTZ",
+          "purpose": "Last update time",
+          "sql_type": "timestamptz"
+        },
+        {
+          "name": "deleted_at",
+          "definition": "TIMESTAMPTZ NULL",
+          "purpose": "Soft deletion timestamp",
+          "sql_type": "timestamptz"
+        },
+        {
+          "name": "delivery_agent_payout_id",
+          "definition": "BIGINT FK",
+          "purpose": "delivery_agent_payouts.id",
+          "sql_type": "bigint"
+        },
+        {
+          "name": "delivery_agent_earning_id",
+          "definition": "BIGINT FK",
+          "purpose": "delivery_agent_earnings.id",
+          "sql_type": "bigint"
+        },
+        {
+          "name": "amount_paise",
+          "definition": "BIGINT",
+          "purpose": "Amount applied",
+          "sql_type": "bigint"
+        }
+      ],
+      "source": "Yember_Payments_and_Activity_Logs_Architecture.docx"
+    },
+    {
+      "table": "cash_collections",
+      "columns": [
+        {
+          "name": "id",
+          "definition": "BIGINT PK",
+          "purpose": "Internal numeric primary key",
+          "sql_type": "bigint"
+        },
+        {
+          "name": "uuid",
+          "definition": "UUID UNIQUE",
+          "purpose": "Public-facing identifier",
+          "sql_type": "uuid"
+        },
+        {
+          "name": "created_at",
+          "definition": "TIMESTAMPTZ",
+          "purpose": "Creation time",
+          "sql_type": "timestamptz"
+        },
+        {
+          "name": "updated_at",
+          "definition": "TIMESTAMPTZ",
+          "purpose": "Last update time",
+          "sql_type": "timestamptz"
+        },
+        {
+          "name": "deleted_at",
+          "definition": "TIMESTAMPTZ NULL",
+          "purpose": "Soft deletion timestamp",
+          "sql_type": "timestamptz"
+        },
+        {
+          "name": "order_id",
+          "definition": "BIGINT FK",
+          "purpose": "orders.id",
+          "sql_type": "bigint"
+        },
+        {
+          "name": "delivery_agent_id",
+          "definition": "BIGINT FK",
+          "purpose": "delivery_agents.id",
+          "sql_type": "bigint"
+        },
+        {
+          "name": "restaurant_id",
+          "definition": "BIGINT FK",
+          "purpose": "restaurants.id",
+          "sql_type": "bigint"
+        },
+        {
+          "name": "amount_due_paise",
+          "definition": "BIGINT",
+          "purpose": "Expected cash",
+          "sql_type": "bigint"
+        },
+        {
+          "name": "amount_collected_paise",
+          "definition": "BIGINT",
+          "purpose": "Cash received",
+          "sql_type": "bigint"
+        },
+        {
+          "name": "collected_at",
+          "definition": "TIMESTAMPTZ NULL",
+          "purpose": "Agent receipt time",
+          "sql_type": "timestamptz"
+        },
+        {
+          "name": "restaurant_payout_id",
+          "definition": "BIGINT FK NULL",
+          "purpose": "Cash handover payout",
+          "sql_type": "bigint"
+        },
+        {
+          "name": "status",
+          "definition": "VARCHAR(24)",
+          "purpose": "DUE / COLLECTED / HANDED_OVER / DISPUTED",
+          "sql_type": "varchar(24)"
+        }
+      ],
+      "source": "Yember_Payments_and_Activity_Logs_Architecture.docx"
+    },
+    {
+      "table": "financial_transactions",
+      "columns": [
+        {
+          "name": "id",
+          "definition": "BIGINT PK",
+          "purpose": "Internal numeric primary key",
+          "sql_type": "bigint"
+        },
+        {
+          "name": "uuid",
+          "definition": "UUID UNIQUE",
+          "purpose": "Public-facing identifier",
+          "sql_type": "uuid"
+        },
+        {
+          "name": "created_at",
+          "definition": "TIMESTAMPTZ",
+          "purpose": "Creation time",
+          "sql_type": "timestamptz"
+        },
+        {
+          "name": "updated_at",
+          "definition": "TIMESTAMPTZ",
+          "purpose": "Last update time",
+          "sql_type": "timestamptz"
+        },
+        {
+          "name": "deleted_at",
+          "definition": "TIMESTAMPTZ NULL",
+          "purpose": "Soft deletion timestamp",
+          "sql_type": "timestamptz"
+        },
+        {
+          "name": "order_id",
+          "definition": "BIGINT FK NULL",
+          "purpose": "orders.id",
+          "sql_type": "bigint"
+        },
+        {
+          "name": "payment_id",
+          "definition": "BIGINT FK NULL",
+          "purpose": "payments.id",
+          "sql_type": "bigint"
+        },
+        {
+          "name": "restaurant_earning_id",
+          "definition": "BIGINT FK NULL",
+          "purpose": "restaurant_earnings.id",
+          "sql_type": "bigint"
+        },
+        {
+          "name": "agent_earning_id",
+          "definition": "BIGINT FK NULL",
+          "purpose": "delivery_agent_earnings.id",
+          "sql_type": "bigint"
+        },
+        {
+          "name": "restaurant_payout_id",
+          "definition": "BIGINT FK NULL",
+          "purpose": "restaurant_payouts.id",
+          "sql_type": "bigint"
+        },
+        {
+          "name": "agent_payout_id",
+          "definition": "BIGINT FK NULL",
+          "purpose": "delivery_agent_payouts.id",
+          "sql_type": "bigint"
+        },
+        {
+          "name": "registration_fee_id",
+          "definition": "BIGINT FK NULL",
+          "purpose": "registration_fees.id",
+          "sql_type": "bigint"
+        },
+        {
+          "name": "transaction_type",
+          "definition": "VARCHAR(48)",
+          "purpose": "COLLECTION / EARNING / PAYOUT / REFUND / REVERSAL / ADJUSTMENT",
+          "sql_type": "varchar(48)"
+        },
+        {
+          "name": "account_code",
+          "definition": "VARCHAR(48)",
+          "purpose": "YEMBER_BANK / RESTAURANT_PAYABLE / AGENT_PAYABLE / CASH_IN_TRANSIT / etc.",
+          "sql_type": "varchar(48)"
+        },
+        {
+          "name": "direction",
+          "definition": "VARCHAR(8)",
+          "purpose": "DEBIT / CREDIT",
+          "sql_type": "varchar(8)"
+        },
+        {
+          "name": "amount_paise",
+          "definition": "BIGINT",
+          "purpose": "Positive posting amount",
+          "sql_type": "bigint"
+        },
+        {
+          "name": "currency",
+          "definition": "CHAR(3)",
+          "purpose": "INR",
+          "sql_type": "char(3)"
+        },
+        {
+          "name": "event_key",
+          "definition": "VARCHAR(160)",
+          "purpose": "Unique posting idempotency key",
+          "sql_type": "varchar(160)"
+        },
+        {
+          "name": "occurred_at",
+          "definition": "TIMESTAMPTZ",
+          "purpose": "Financial event time",
+          "sql_type": "timestamptz"
+        }
+      ],
+      "source": "Yember_Payments_and_Activity_Logs_Architecture.docx"
+    },
+    {
+      "table": "payment_webhook_events",
+      "columns": [
+        {
+          "name": "id",
+          "definition": "BIGINT PK",
+          "purpose": "Internal numeric primary key",
+          "sql_type": "bigint"
+        },
+        {
+          "name": "uuid",
+          "definition": "UUID UNIQUE",
+          "purpose": "Public-facing identifier",
+          "sql_type": "uuid"
+        },
+        {
+          "name": "created_at",
+          "definition": "TIMESTAMPTZ",
+          "purpose": "Creation time",
+          "sql_type": "timestamptz"
+        },
+        {
+          "name": "updated_at",
+          "definition": "TIMESTAMPTZ",
+          "purpose": "Last update time",
+          "sql_type": "timestamptz"
+        },
+        {
+          "name": "deleted_at",
+          "definition": "TIMESTAMPTZ NULL",
+          "purpose": "Soft deletion timestamp",
+          "sql_type": "timestamptz"
+        },
+        {
+          "name": "provider",
+          "definition": "VARCHAR(24)",
+          "purpose": "RAZORPAY",
+          "sql_type": "varchar(24)"
+        },
+        {
+          "name": "provider_event_id",
+          "definition": "VARCHAR(160)",
+          "purpose": "Unique event ID or deterministic fingerprint",
+          "sql_type": "varchar(160)"
+        },
+        {
+          "name": "event_type",
+          "definition": "VARCHAR(100)",
+          "purpose": "Provider event name",
+          "sql_type": "varchar(100)"
+        },
+        {
+          "name": "payload_json",
+          "definition": "JSONB",
+          "purpose": "Restricted raw event payload",
+          "sql_type": "jsonb"
+        },
+        {
+          "name": "signature_valid",
+          "definition": "BOOLEAN",
+          "purpose": "Signature verification outcome",
+          "sql_type": "boolean"
+        },
+        {
+          "name": "processing_status",
+          "definition": "VARCHAR(24)",
+          "purpose": "RECEIVED / PROCESSED / FAILED",
+          "sql_type": "varchar(24)"
+        },
+        {
+          "name": "processed_at",
+          "definition": "TIMESTAMPTZ NULL",
+          "purpose": "Processing completion",
+          "sql_type": "timestamptz"
+        }
+      ],
+      "source": "Yember_Payments_and_Activity_Logs_Architecture.docx"
+    },
+    {
+      "table": "refunds",
+      "columns": [
+        {
+          "name": "id",
+          "definition": "BIGINT PK",
+          "purpose": "Internal numeric primary key",
+          "sql_type": "bigint"
+        },
+        {
+          "name": "uuid",
+          "definition": "UUID UNIQUE",
+          "purpose": "Public-facing identifier",
+          "sql_type": "uuid"
+        },
+        {
+          "name": "created_at",
+          "definition": "TIMESTAMPTZ",
+          "purpose": "Creation time",
+          "sql_type": "timestamptz"
+        },
+        {
+          "name": "updated_at",
+          "definition": "TIMESTAMPTZ",
+          "purpose": "Last update time",
+          "sql_type": "timestamptz"
+        },
+        {
+          "name": "deleted_at",
+          "definition": "TIMESTAMPTZ NULL",
+          "purpose": "Soft deletion timestamp",
+          "sql_type": "timestamptz"
+        },
+        {
+          "name": "payment_id",
+          "definition": "BIGINT FK",
+          "purpose": "payments.id",
+          "sql_type": "bigint"
+        },
+        {
+          "name": "order_id",
+          "definition": "BIGINT FK NULL",
+          "purpose": "orders.id",
+          "sql_type": "bigint"
+        },
+        {
+          "name": "amount_paise",
+          "definition": "BIGINT",
+          "purpose": "Refund amount",
+          "sql_type": "bigint"
+        },
+        {
+          "name": "reason",
+          "definition": "VARCHAR(255) NULL",
+          "purpose": "Refund reason",
+          "sql_type": "varchar(255)"
+        },
+        {
+          "name": "provider_refund_id",
+          "definition": "VARCHAR(120) NULL",
+          "purpose": "Razorpay refund id",
+          "sql_type": "varchar(120)"
+        },
+        {
+          "name": "status",
+          "definition": "VARCHAR(24)",
+          "purpose": "REQUESTED / PROCESSING / SUCCEEDED / FAILED",
+          "sql_type": "varchar(24)"
+        },
+        {
+          "name": "completed_at",
+          "definition": "TIMESTAMPTZ NULL",
+          "purpose": "Verified refund time",
+          "sql_type": "timestamptz"
+        }
+      ],
+      "source": "Yember_Payments_and_Activity_Logs_Architecture.docx"
+    },
+    {
+      "table": "reconciliation_runs",
+      "columns": [
+        {
+          "name": "id",
+          "definition": "BIGINT PK",
+          "purpose": "Internal numeric primary key",
+          "sql_type": "bigint"
+        },
+        {
+          "name": "uuid",
+          "definition": "UUID UNIQUE",
+          "purpose": "Public-facing identifier",
+          "sql_type": "uuid"
+        },
+        {
+          "name": "created_at",
+          "definition": "TIMESTAMPTZ",
+          "purpose": "Creation time",
+          "sql_type": "timestamptz"
+        },
+        {
+          "name": "updated_at",
+          "definition": "TIMESTAMPTZ",
+          "purpose": "Last update time",
+          "sql_type": "timestamptz"
+        },
+        {
+          "name": "deleted_at",
+          "definition": "TIMESTAMPTZ NULL",
+          "purpose": "Soft deletion timestamp",
+          "sql_type": "timestamptz"
+        },
+        {
+          "name": "source",
+          "definition": "VARCHAR(32)",
+          "purpose": "RAZORPAY / BANK / CASH",
+          "sql_type": "varchar(32)"
+        },
+        {
+          "name": "period_start",
+          "definition": "TIMESTAMPTZ",
+          "purpose": "Reconciliation window start",
+          "sql_type": "timestamptz"
+        },
+        {
+          "name": "period_end",
+          "definition": "TIMESTAMPTZ",
+          "purpose": "Reconciliation window end",
+          "sql_type": "timestamptz"
+        },
+        {
+          "name": "status",
+          "definition": "VARCHAR(24)",
+          "purpose": "RUNNING / MATCHED / EXCEPTIONS / FAILED",
+          "sql_type": "varchar(24)"
+        },
+        {
+          "name": "difference_paise",
+          "definition": "BIGINT",
+          "purpose": "Net discrepancy",
+          "sql_type": "bigint"
+        },
+        {
+          "name": "summary_json",
+          "definition": "JSONB NULL",
+          "purpose": "Counts and exceptions",
+          "sql_type": "jsonb"
+        }
+      ],
+      "source": "Yember_Payments_and_Activity_Logs_Architecture.docx"
+    },
+    {
+      "table": "system_activity_logs",
+      "columns": [
+        {
+          "name": "id",
+          "definition": "BIGINT PK",
+          "purpose": "Internal numeric primary key",
+          "sql_type": "bigint"
+        },
+        {
+          "name": "uuid",
+          "definition": "UUID UNIQUE",
+          "purpose": "Public-facing identifier",
+          "sql_type": "uuid"
+        },
+        {
+          "name": "created_at",
+          "definition": "TIMESTAMPTZ",
+          "purpose": "Creation time",
+          "sql_type": "timestamptz"
+        },
+        {
+          "name": "updated_at",
+          "definition": "TIMESTAMPTZ",
+          "purpose": "Last update time",
+          "sql_type": "timestamptz"
+        },
+        {
+          "name": "deleted_at",
+          "definition": "TIMESTAMPTZ NULL",
+          "purpose": "Soft deletion timestamp",
+          "sql_type": "timestamptz"
+        },
+        {
+          "name": "actor_type",
+          "definition": "VARCHAR(32)",
+          "purpose": "ADMIN / RESTAURANT / AGENT / USER / SYSTEM",
+          "sql_type": "varchar(32)"
+        },
+        {
+          "name": "actor_id",
+          "definition": "BIGINT NULL",
+          "purpose": "Internal actor ID within actor type",
+          "sql_type": "bigint"
+        },
+        {
+          "name": "action",
+          "definition": "VARCHAR(32)",
+          "purpose": "CREATE / UPDATE / DELETE / APPROVE / REJECT / PAY / REFUND / PAYOUT",
+          "sql_type": "varchar(32)"
+        },
+        {
+          "name": "entity_type",
+          "definition": "VARCHAR(64)",
+          "purpose": "STATION / CATEGORY / RESTAURANT / MENU_ITEM / PAYMENT / etc.",
+          "sql_type": "varchar(64)"
+        },
+        {
+          "name": "entity_id",
+          "definition": "BIGINT NULL",
+          "purpose": "Affected entity internal ID",
+          "sql_type": "bigint"
+        },
+        {
+          "name": "entity_uuid",
+          "definition": "UUID NULL",
+          "purpose": "Affected public UUID",
+          "sql_type": "uuid"
+        },
+        {
+          "name": "before_json",
+          "definition": "JSONB NULL",
+          "purpose": "Previous non-sensitive field values",
+          "sql_type": "jsonb"
+        },
+        {
+          "name": "after_json",
+          "definition": "JSONB NULL",
+          "purpose": "New non-sensitive field values",
+          "sql_type": "jsonb"
+        },
+        {
+          "name": "request_id",
+          "definition": "VARCHAR(120) NULL",
+          "purpose": "Correlation ID",
+          "sql_type": "varchar(120)"
+        },
+        {
+          "name": "ip_address",
+          "definition": "INET NULL",
+          "purpose": "Request origin",
+          "sql_type": "inet"
+        },
+        {
+          "name": "user_agent",
+          "definition": "TEXT NULL",
+          "purpose": "Client metadata",
+          "sql_type": "text"
+        },
+        {
+          "name": "occurred_at",
+          "definition": "TIMESTAMPTZ",
+          "purpose": "Event timestamp",
+          "sql_type": "timestamptz"
+        }
+      ],
+      "source": "Yember_Payments_and_Activity_Logs_Architecture.docx"
+    },
+    {
+      "table": "coupons",
+      "source": "User request",
+      "columns": [
+        {
+          "name": "id",
+          "definition": "bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY",
+          "sql_type": "bigint"
+        },
+        {
+          "name": "uuid",
+          "definition": "uuid NOT NULL UNIQUE DEFAULT gen_random_uuid()",
+          "sql_type": "uuid"
+        },
+        {
+          "name": "created_at",
+          "definition": "timestamptz NOT NULL DEFAULT now()",
+          "sql_type": "timestamptz"
+        },
+        {
+          "name": "updated_at",
+          "definition": "timestamptz NOT NULL DEFAULT now()",
+          "sql_type": "timestamptz"
+        },
+        {
+          "name": "deleted_at",
+          "definition": "timestamptz NULL",
+          "sql_type": "timestamptz"
+        },
+        {
+          "name": "code",
+          "definition": "varchar(50) NOT NULL UNIQUE",
+          "sql_type": "varchar(50)"
+        },
+        {
+          "name": "description",
+          "definition": "text",
+          "sql_type": "text"
+        },
+        {
+          "name": "discount_type",
+          "definition": "varchar(16) NOT NULL",
+          "sql_type": "varchar(16)"
+        },
+        {
+          "name": "discount_value",
+          "definition": "bigint NOT NULL",
+          "sql_type": "bigint"
+        },
+        {
+          "name": "min_order_amount_paise",
+          "definition": "bigint NOT NULL DEFAULT 0",
+          "sql_type": "bigint"
+        },
+        {
+          "name": "max_discount_amount_paise",
+          "definition": "bigint NULL",
+          "sql_type": "bigint"
+        },
+        {
+          "name": "valid_from",
+          "definition": "timestamptz NOT NULL DEFAULT now()",
+          "sql_type": "timestamptz"
+        },
+        {
+          "name": "valid_until",
+          "definition": "timestamptz NULL",
+          "sql_type": "timestamptz"
+        },
+        {
+          "name": "usage_limit",
+          "definition": "integer NULL",
+          "sql_type": "integer"
+        },
+        {
+          "name": "is_active",
+          "definition": "boolean NOT NULL DEFAULT true",
+          "sql_type": "boolean"
+        }
+      ]
+    },
+    {
+      "table": "coupon_usages",
+      "source": "User request",
+      "columns": [
+        {
+          "name": "id",
+          "definition": "bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY",
+          "sql_type": "bigint"
+        },
+        {
+          "name": "uuid",
+          "definition": "uuid NOT NULL UNIQUE DEFAULT gen_random_uuid()",
+          "sql_type": "uuid"
+        },
+        {
+          "name": "created_at",
+          "definition": "timestamptz NOT NULL DEFAULT now()",
+          "sql_type": "timestamptz"
+        },
+        {
+          "name": "updated_at",
+          "definition": "timestamptz NOT NULL DEFAULT now()",
+          "sql_type": "timestamptz"
+        },
+        {
+          "name": "deleted_at",
+          "definition": "timestamptz NULL",
+          "sql_type": "timestamptz"
+        },
+        {
+          "name": "coupon_id",
+          "definition": "bigint NOT NULL FK coupons.id",
+          "sql_type": "bigint"
+        },
+        {
+          "name": "user_id",
+          "definition": "bigint NOT NULL FK users.id",
+          "sql_type": "bigint"
+        },
+        {
+          "name": "order_id",
+          "definition": "bigint NOT NULL UNIQUE FK orders.id",
+          "sql_type": "bigint"
+        },
+        {
+          "name": "discount_amount_paise",
+          "definition": "bigint NOT NULL",
+          "sql_type": "bigint"
+        },
+        {
+          "name": "redeemed_at",
+          "definition": "timestamptz NOT NULL DEFAULT now()",
+          "sql_type": "timestamptz"
+        }
+      ]
+    }
+  ],
+  "overrides": {
+    "restaurant_registration_fee_paise": 20000,
+    "cash_handover": "GROSS",
+    "rider_registration_fee_paise": 15000,
+    "registration_refundable": false,
+    "created_at": "Replaces create_at",
+    "coupons": "Yember administrators only; retained usage history",
+    "updated_at": "Replaces update_at"
+  }
+}

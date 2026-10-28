@@ -57,7 +57,7 @@ func TestCaptureLedgerRecognitionAndImmutability(t *testing.T) {
 		t.Fatal(err)
 	}
 	var order string
-	if err := p.QueryRow(ctx, `INSERT INTO public.orders(customer_id,merchant_id,status,total_price,delivery_address) VALUES($1,$2,'CREATED',1000,'{"latitude":34,"longitude":74}') RETURNING id`, devseed.CustomerID, devseed.RestaurantID).Scan(&order); err != nil {
+	if err := p.QueryRow(ctx, `INSERT INTO public.orders(customer_id,restaurant_id,status,total_price,delivery_address) VALUES($1,$2,'CREATED',1000,'{"latitude":34,"longitude":74}') RETURNING id`, devseed.CustomerID, devseed.RestaurantID).Scan(&order); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := p.Exec(ctx, `UPDATE finance.policy SET delivery_charge=0,rider_base=0`); err != nil {

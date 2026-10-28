@@ -51,17 +51,14 @@ func Load() (*Config, error) {
 		return nil, errors.New("POSTGRES_DSN is required")
 	}
 	if os.Getenv("ENVIRONMENT") == "production" {
-		if !cfg.AdminCookieSecure || os.Getenv("ADMIN_MFA_REQUIRED") != "true" || os.Getenv("ADMIN_TOTP_SECRETS") == "" {
-			return nil, errors.New("production requires secure admin cookies and provisioned MFA")
+		if !cfg.AdminCookieSecure {
+			return nil, errors.New("production requires secure admin cookies")
 		}
 		if strings.Contains(cfg.CORSAllowedOrigins, "localhost") || strings.Contains(cfg.CORSAllowedOrigins, "*") {
 			return nil, errors.New("production CORS must specify deployed origins")
 		}
 		if !strings.Contains(cfg.PostgresDSN, "sslmode=verify-full") {
 			return nil, errors.New("production database requires sslmode=verify-full")
-		}
-		if !cfg.EmailDeliveryEnabled || cfg.ResendAPIKey == "" || cfg.EmailFrom == "" {
-			return nil, errors.New("production transactional email must be configured")
 		}
 		if os.Getenv("FINANCE_BANK_KEYS") == "" || os.Getenv("FINANCE_BANK_ACTIVE_KEY") == "" {
 			return nil, errors.New("production bank encryption keys are required")
@@ -76,9 +73,6 @@ func Load() (*Config, error) {
 		}
 		if len(os.Getenv("OTP_HASH_SECRET")) < 32 {
 			return nil, errors.New("production OTP_HASH_SECRET must contain at least 32 characters")
-		}
-		if os.Getenv("DOCUMENT_CLAMAV_ADDRESS") == "" {
-			return nil, errors.New("production document scanner must be configured")
 		}
 		if os.Getenv("TEXTBEE_DELIVERY_ENABLED") != "true" || os.Getenv("TEXTBEE_API_KEY") == "" {
 			return nil, errors.New("production TextBee phone verification must be configured")

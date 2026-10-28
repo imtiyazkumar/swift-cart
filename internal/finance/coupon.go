@@ -16,7 +16,7 @@ func Coupon(ctx context.Context, tx pgx.Tx, code string, gross int64) (string, i
 	var id, kind string
 	var value, minimum int64
 	var maximum *int64
-	err := tx.QueryRow(ctx, `SELECT id,discount_type,discount_value,min_order_amount,max_discount_amount FROM orders.coupons WHERE UPPER(code)=UPPER($1) AND is_active AND valid_from<=now() AND (valid_until IS NULL OR valid_until>now()) AND (usage_limit IS NULL OR used_count<usage_limit) FOR UPDATE`, code).Scan(&id, &kind, &value, &minimum, &maximum)
+	err := tx.QueryRow(ctx, `SELECT id,discount_type,discount_value,min_order_amount,max_discount_amount FROM orders.coupons WHERE UPPER(code)=UPPER($1) AND deleted_at IS NULL AND is_active AND valid_from<=now() AND (valid_until IS NULL OR valid_until>now()) AND (usage_limit IS NULL OR used_count<usage_limit) FOR UPDATE`, code).Scan(&id, &kind, &value, &minimum, &maximum)
 	if err != nil || gross < minimum {
 		return "", 0, errors.New("coupon expired, exhausted or not eligible for this cart")
 	}

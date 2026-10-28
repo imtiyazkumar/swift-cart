@@ -1,70 +1,42 @@
-# Domain migrations
+# Document database schema
 
-Run from `yember-core`:
+The application installs exactly **38 tables in public**: the 36 tables from the two supplied architecture documents, plus the explicitly requested coupons and coupon_usages.
+
+The active installation is ordered and contains only final definitions:
+
+1. [001_schema.sql](document/001_schema.sql): the 38 tables, public UUIDs, numeric identities and foreign keys.
+2. [002_constraints.sql](document/002_constraints.sql): invariants and operational indexes.
+3. [003_behaviors.sql](document/003_behaviors.sql): current functions and triggers, each defined once.
+4. [004_geography.sql](document/004_geography.sql): service-area calculations.
+
+`document.SQL` embeds this order explicitly. Existing installations validate their
+schema and refresh the idempotent behavior definitions; they do not replay table
+creation or reset records. Historical intermediate function versions are absent
+from the active baseline. All internal keys are GENERATED ALWAYS bigint identities.
+Public identifiers are unique UUIDs. Foreign keys use bigint.
+
+Run from yember-core:
 
 ```sh
 go run ./cmd/migrate
 ```
 
-| File | Responsibility |
-| --- | --- |
-| `auth.sql` | Users, roles, sessions, password reset, OTP, MFA, rate limits |
-| `customer.sql` | Customer profiles, addresses, favorites, lifecycle requests |
-| `rider.sql` | Rider onboarding fields, vehicles, earnings, availability guards |
-| `restaurant.sql` | Merchants, branches, hours, documents, reviews, commission configuration |
-| `admin.sql` | Audit, platform settings, private documents, partner applications/support, stations |
-| `catalog.sql` | Categories, items, variants, modifiers, addons, historical image updates, optional demo seed |
-| `order.sql` | Orders, checkout, carts, coupons, history, amount compatibility, station snapshots |
-| `delivery.sql` | Assignments, offers, completion codes/proofs, delivery station relations |
-| `payments.sql` | Gateway records, onboarding payments, central finance, immutable ledgers, refunds, settlement/payout/reconciliation |
-| `notification.sql` | In-app, email, SMS and push queues, devices, notification preferences and triggers |
-| `realtime.sql` | Live locations and persisted order events/capture triggers used by realtime delivery |
+The command installs an empty database or validates/upgrades an existing document installation. It rejects extra application tables and incompatible columns. The API performs the same strict validation at startup. It never creates a schema_migrations application table.
 
-## Execution and existing databases
+## Legacy installations
 
-These are domain source files, **not independently executable SQL scripts**.
-`manifest.json` orders their blocks across domain boundaries, reconstructing the
-original 54 migrations byte for byte. Cross-domain foreign keys, data repairs,
-triggers and transaction boundaries therefore retain their existing behavior.
-The embedded bundle is validated before any migration is applied.
+The SQL in legacy/ is an immutable historical conversion/test source. It is not executed by the normal migration command. Its original migration identities and checksums remain unchanged so existing financial history can be checked correctly.
 
-The old numbered files have been removed. Their names remain stable migration
-**identities** in the manifest and `public.schema_migrations`. Applied checksums,
-timestamps and database data are not rewritten, and tracked migrations are not
-replayed. Both historical LF and CRLF checksums are recognized. An incorrect
-checksum still stops the migration. Fully migrated databases require no reset or
-manual baseline. Partially migrated tracked databases resume their missing steps.
+Never run the legacy SQL manually against a document installation. Never baseline or reset an existing database to make it pass validation.
 
-For an existing **untracked** database, inspect its actual schema and back up first.
-Only then use the existing `--baseline-through <historical-identity>` option when
-that identity really reflects what is installed. This option asserts that the
-earlier SQL already ran; it does not verify the assertion. A fresh database needs
-no baseline. `--file <historical-identity>` remains available for deliberate
-repairs; a domain filename is rejected because it would bypass dependencies.
-
-Demo users/catalog remain disabled by default. `--include-demo-seed` retains the
-old optional seed behavior; never use it in production. For current local fixtures
-prefer the guarded `cmd/seed_local` workflow documented in `docs/local-development.md`.
-
-## Future changes
-
-Do not edit historical blocks, their checksums or IDs. Add a new, uniquely numbered
-standalone SQL migration (for example `054_descriptive_change.sql`); the runner
-embeds and discovers it automatically, applies it in filename order, and tracks
-its checksum using the same transaction/advisory lock. Do not add SQL outside the
-marked blocks in domain files. `.gitattributes` preserves their exact bytes.
-
-## Verification
+The backed-up local yember database had no operational records. It was replaced transactionally with the 38-table schema; its 67 configuration/migration records were retained in system_activity_logs. An empty legacy replacement requires a verified custom-format pg_dump backup:
 
 ```sh
-YEMBER_INTEGRATION=1 go test ./... -count=1
+go run ./cmd/migrate --replace-empty-legacy --backup-file /path/to/verified-backup.dump
 ```
 
-Migration tests cover bundle integrity, partially migrated upgrades, unchanged
-tracking history, repeated execution, line-ending compatibility, untracked schema
-protection and transaction rollback. For an independent pre/post comparison, keep
-an external snapshot of the original SQL and set `YEMBER_ORIGINAL_MIGRATIONS` to
-that directory and `YEMBER_PG_DUMP` to the installed `pg_dump` executable. The
-additional tests compare every original SQL byte, complete fresh schema dumps,
-and every table's seed row count, with and without demo data. They create and
-remove disposable test databases; they do not modify the configured database.
+This command refuses even one existing operational record. Nonempty installations require lossless conversion. internal/contractschema.PrepareLegacy builds a separate schema and checks users, orders, charged prices, receipt labels, addresses, ledger values, payee balances, bank encryption context, refunds and cash history. Some central payout and legacy-provider conversions remain guarded as unsupported; such databases must not be switched or reset.
+
+Integration tests create isolated databases. Existing application/test databases are not deleted by the test helper.
+
+Tables are organized into document-based PostgreSQL schemas; see [database groups](../docs/database-groups.md). Existing public tables are moved transactionally without rebuilding data.

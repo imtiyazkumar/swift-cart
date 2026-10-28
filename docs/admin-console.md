@@ -1,91 +1,16 @@
-# Admin console API
+# Administrator web workspace
 
-`yember-web` is the independent React Router and TanStack Query application for
-this API. Apply all tracked migrations, including `032_partner_workspaces.sql`,
-before starting the updated Core binary. Existing databases must follow the
-migration/baseline procedure in [platform setup](platform-setup.md).
+The web app obtains its complete resource list from GET /admin/contract. Navigation contains exactly the documented domains and the two approved coupon resources. Support cases, reviews, email queues, MFA, modifiers, addons and generic merchant verticals are absent from the active web application.
 
-## Browser sessions
+Each editable entity uses a dedicated creation/edit URL under /records/:resource. Forms are full pages with related-record selection, typed fields, a change reason and a persistent save area. They do not use edit modals. Read-only workflow entities have searchable lists and detailed history views.
 
-The `/api/v1/auth/admin` endpoints inherit the authentication rate limiter.
-They require `X-Yember-Admin: 1`; a supplied Origin must exactly match an entry in
-`CORS_ALLOWED_ORIGINS`.
+Administrator-only operations cover global categories, stations, users/roles, restaurant and rider reviews, menus and variants, verification documents and coupons. Coupon deletion retains coupon_usages; activation updates do not erase the code or its history.
 
-- `POST /login` accepts email/password, verifies an active ADMIN identity, stores
-  a hashed refresh session and returns a short-lived access token and safe user
-  profile. The refresh credential is only returned in an HttpOnly cookie.
-- `POST /session` consumes and rotates a valid refresh session. Replayed refresh
-  credentials fail. Current role/account eligibility is checked again.
-- `POST /logout` revokes the cookie's refresh credential and clears the cookie.
+Bank detail pages provide verification actions. Available earning pages prepare bank payouts. Bank payout detail pages require a second administrator, confirmed status, original bank reference and reason. Captured online payment pages request bounded, idempotent refunds; refund pages reconcile provider results. These are operational forms, not arbitrary financial table edits.
 
-The cookie is SameSite=Strict, scoped to `/api/v1/auth/admin`, and lasts seven days.
-`ADMIN_COOKIE_SECURE` defaults true. Set false only for local HTTP development.
-Protected admin APIs continue to require bearer authentication and current ADMIN
-authorization. CORS permits credentials and the admin header for explicitly
-configured origins.
+The last active administrator cannot be disabled or demoted. Financial postings, coupon usage, order milestones and activity logs are immutable. Sensitive hashes, encrypted bank data and raw provider payloads are not exposed by record projections.
 
-## Resources
+Run npm run dev in yember-web after starting Core. The local default is http://127.0.0.1:5173. Seeded administrator credentials use admin@yember.test and LOCAL_SEED_PASSWORD from the private Core environment.
 
-All routes below are under `/api/v1/admin` and require ADMIN authorization.
-
-- `GET /console/overview` returns pending applications, customer/online partner
-  counts, unassigned orders, failed emails and seven UTC calendar days of volume.
-- `GET /console/integrations` returns configuration-presence flags only, never
-  provider secrets. These flags do not prove a provider works.
-- `GET /manage/:resource?q=&status=&role=&page=1&limit=25` returns
-  `{items,total,page,limit}`. Limit is at most 100. Parameters are bound SQL values;
-  resources and selected fields come from a fixed whitelist.
-- `GET /manage/:resource/:id` returns `{record,...related}`. Related order/delivery
-  history is limited to the latest 50 records. Records exclude passwords, token
-  hashes and email bodies.
-
-Resources: `customers`, `users`, `restaurants`, `partners`, `orders`, `payments`,
-`reviews`, `coupons`, `audit`, `emails`, `support`. IDs are validated as UUIDs. Payment
-projections include order payments and onboarding payments.
-
-## Changes
-
-Management changes validate a reason, execute with a fresh active ADMIN check,
-and commit the audit record in the same transaction.
-
-| Method and path                           | Body / behavior                                                                                               |
-| ----------------------------------------- | ------------------------------------------------------------------------------------------------------------- |
-| `PATCH /manage/:resource/:id/profile`     | `name`, `phone`, `reason`; restaurant `description`, `address`; partner `vehicle_type`, `registration_number` |
-| `POST /manage/:resource/:id/status`       | For customers/users: `disabled`, `reason`; cannot disable self or the last administrator                      |
-| `POST /manage/:resource/:id/availability` | For restaurants/partners: `available`, `reason`; activation gates are checked                                 |
-| `PUT /manage/restaurants/:id/items/:item` | `name`, `description`, `price` in minor units, `is_available`, `reason`; item must belong to restaurant       |
-| `POST /manage/coupons`                    | Coupon terms plus `reason`                                                                                    |
-| `PUT /manage/coupons/:id`                 | Coupon terms plus `reason`                                                                                    |
-| `POST /manage/reviews/:id/operation`      | `enabled` means published; `reason`; preserves original review and moderation audit                           |
-| `POST /manage/emails/:id/operation`       | `enabled: true`, `reason`; failed messages less than 24 hours old with retained body only                     |
-| `POST /manage/support/:id/operation`      | `enabled: false` resolves; `true` reopens; requires an audit reason                                           |
-| `POST /partner-support/:id/messages`      | `body`; writes an operator reply and marks the case in progress atomically with an audit event                |
-
-Existing approval, suspension, user role, fee/dispatch settings and order
-cancellation endpoints remain in use. Disabling an account revokes refresh
-sessions, closes owned restaurants, sets delivery partners offline and expires
-pending offers. Re-enabling an account does not automatically reopen operations.
-Role changes and disable operations serialize protection of the last admin.
-
-Restaurant profile editing targets its first undeleted branch, creating that
-branch when missing; secondary addresses are retained. Vehicle editing targets
-the first vehicle displayed in the profile. Menu creation and onboarding remain
-in the existing partner workflows. The console does not delete financial or
-historical records, issue refunds, fabricate settlements or bypass onboarding
-payments. Paid cancellation requires an implemented verified refund workflow.
-
-## Checks
-
-`YEMBER_INTEGRATION=1 go test ./... -count=1` creates disposable test databases and
-applies migrations without demo seeds. The admin suites check management queries,
-RBAC, UUID validation, reason guards, activation gates, profile/menu/coupon edits,
-branch isolation, review visibility, safe email retries, safe projections and
-transactional audit records. The auth suite checks cookie flags, origin rejection,
-rotation/replay protection and logout invalidation.
-
-The new migration was validated in isolated databases; installation into an
-existing application database is an explicit operator startup step.
-
-Operational station setup and strict coverage contracts: [stations](stations.md).
-
-Order timelines read `orders.order_events` (migration 035). Core captures order creation and each status transition automatically in the transaction that changes the order. Existing history writers enrich the event with the actor and reason without duplicating the transition. Existing history timestamps are retained; missing intermediate historical timestamps remain unknown. Timeline timestamps include seconds.
+Every list supports schema-defined entity, state and date filters. See
+[filter contract and per-list coverage](admin-filters.md).

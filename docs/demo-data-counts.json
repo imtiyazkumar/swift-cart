@@ -1,0 +1,202 @@
+{
+  "database": "localhost/yember",
+  "populated_tables": 38,
+  "rows_added": 203885,
+  "total_rows": 204216,
+  "verified_distinct_image_urls": 13,
+  "new_image_fields": 1275,
+  "sample_pdf_documents": 360,
+  "second_run_rows_added": 0,
+  "tables": [
+    {
+      "table": "accounting.financial_transactions",
+      "before": 0,
+      "after": 29848
+    },
+    {
+      "table": "accounting.reconciliation_runs",
+      "before": 0,
+      "after": 120
+    },
+    {
+      "table": "activity.system_activity_logs",
+      "before": 238,
+      "after": 104682
+    },
+    {
+      "table": "cash.cash_collections",
+      "before": 0,
+      "after": 1083
+    },
+    {
+      "table": "delivery.delivery_agent_bank_details",
+      "before": 0,
+      "after": 120
+    },
+    {
+      "table": "delivery.delivery_assignments",
+      "before": 0,
+      "after": 3750
+    },
+    {
+      "table": "delivery.rider_documents",
+      "before": 0,
+      "after": 240
+    },
+    {
+      "table": "delivery.rider_locations",
+      "before": 0,
+      "after": 1200
+    },
+    {
+      "table": "delivery.riders",
+      "before": 1,
+      "after": 121
+    },
+    {
+      "table": "earnings.delivery_agent_earnings",
+      "before": 0,
+      "after": 3250
+    },
+    {
+      "table": "earnings.restaurant_earnings",
+      "before": 0,
+      "after": 3250
+    },
+    {
+      "table": "orders.cart_items",
+      "before": 0,
+      "after": 1800
+    },
+    {
+      "table": "orders.carts",
+      "before": 0,
+      "after": 600
+    },
+    {
+      "table": "orders.order_items",
+      "before": 0,
+      "after": 15000
+    },
+    {
+      "table": "orders.order_status_history",
+      "before": 0,
+      "after": 5000
+    },
+    {
+      "table": "orders.orders",
+      "before": 0,
+      "after": 5000
+    },
+    {
+      "table": "payments.payment_intents",
+      "before": 0,
+      "after": 5180
+    },
+    {
+      "table": "payments.payment_webhook_events",
+      "before": 0,
+      "after": 4083
+    },
+    {
+      "table": "payments.payments",
+      "before": 0,
+      "after": 4227
+    },
+    {
+      "table": "payments.refunds",
+      "before": 0,
+      "after": 295
+    },
+    {
+      "table": "payouts.delivery_agent_payout_allocations",
+      "before": 0,
+      "after": 1750
+    },
+    {
+      "table": "payouts.delivery_agent_payouts",
+      "before": 0,
+      "after": 1750
+    },
+    {
+      "table": "payouts.restaurant_payout_allocations",
+      "before": 0,
+      "after": 1750
+    },
+    {
+      "table": "payouts.restaurant_payouts",
+      "before": 0,
+      "after": 1750
+    },
+    {
+      "table": "promotions.coupon_usages",
+      "before": 0,
+      "after": 1000
+    },
+    {
+      "table": "promotions.coupons",
+      "before": 0,
+      "after": 40
+    },
+    {
+      "table": "registration.registration_fees",
+      "before": 2,
+      "after": 182
+    },
+    {
+      "table": "restaurants.item_variants",
+      "before": 0,
+      "after": 2400
+    },
+    {
+      "table": "restaurants.menu_categories",
+      "before": 1,
+      "after": 16
+    },
+    {
+      "table": "restaurants.menu_items",
+      "before": 1,
+      "after": 1201
+    },
+    {
+      "table": "restaurants.restaurant_bank_accounts",
+      "before": 0,
+      "after": 60
+    },
+    {
+      "table": "restaurants.restaurant_documents",
+      "before": 0,
+      "after": 120
+    },
+    {
+      "table": "restaurants.restaurants",
+      "before": 1,
+      "after": 61
+    },
+    {
+      "table": "stations.stations",
+      "before": 1,
+      "after": 21
+    },
+    {
+      "table": "users.otp_challenges",
+      "before": 0,
+      "after": 600
+    },
+    {
+      "table": "users.refresh_tokens",
+      "before": 82,
+      "after": 682
+    },
+    {
+      "table": "users.user_addresses",
+      "before": 0,
+      "after": 1200
+    },
+    {
+      "table": "users.users",
+      "before": 4,
+      "after": 784
+    }
+  ]
+}

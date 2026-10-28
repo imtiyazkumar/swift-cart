@@ -65,17 +65,17 @@ func EmailOTP(pool *pgxpool.Pool) echo.HandlerFunc {
 			return err
 		}
 		var limited bool
-		if err = tx.QueryRow(c.Request().Context(), `SELECT EXISTS(SELECT 1 FROM auth.otp_codes WHERE identifier=$1 AND created_at>now()-interval '1 minute')`, identifier).Scan(&limited); err != nil {
+		if err = tx.QueryRow(c.Request().Context(), `SELECT EXISTS(SELECT 1 FROM public.otp_challenges WHERE identifier=$1 AND created_at>now()-interval '1 minute')`, identifier).Scan(&limited); err != nil {
 			return err
 		}
 		if limited {
 			return echo.NewHTTPError(429, "wait before requesting another code")
 		}
-		if _, err = tx.Exec(c.Request().Context(), `UPDATE auth.otp_codes SET is_used=true WHERE identifier=$1`, identifier); err != nil {
+		if _, err = tx.Exec(c.Request().Context(), `UPDATE public.otp_challenges SET is_used=true WHERE identifier=$1`, identifier); err != nil {
 			return err
 		}
 		var challenge string
-		if err = tx.QueryRow(c.Request().Context(), `INSERT INTO auth.otp_codes(identifier,otp_code,expires_at,is_used) VALUES($1,$2,now()+interval '10 minutes',false) RETURNING id`, identifier, otpHash(code)).Scan(&challenge); err != nil {
+		if err = tx.QueryRow(c.Request().Context(), `INSERT INTO public.otp_challenges(identifier,otp_hash,expires_at,is_used) VALUES($1,$2,now()+interval '10 minutes',false) RETURNING id`, identifier, otpHash(code)).Scan(&challenge); err != nil {
 			return err
 		}
 		message := "Your Yember code is " + code + ". Valid for 10 minutes. Never share sign-in codes."

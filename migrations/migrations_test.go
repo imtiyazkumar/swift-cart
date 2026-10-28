@@ -38,7 +38,7 @@ func TestHistoricalPlan(t *testing.T) {
 
 func TestRejectDamagedBundle(t *testing.T) {
 	original := fstest.MapFS{}
-	err := fs.WalkDir(os.DirFS("."), ".", func(name string, d fs.DirEntry, err error) error {
+	err := fs.WalkDir(os.DirFS("legacy"), ".", func(name string, d fs.DirEntry, err error) error {
 		if err != nil {
 			return err
 		}
@@ -46,7 +46,7 @@ func TestRejectDamagedBundle(t *testing.T) {
 			return nil
 		}
 		if name == "manifest.json" || strings.HasSuffix(name, ".sql") {
-			b, e := os.ReadFile(name)
+			b, e := os.ReadFile(filepath.Join("legacy", name))
 			if e != nil {
 				return e
 			}
@@ -119,8 +119,14 @@ func TestUpgradeAndRepeat(t *testing.T) {
 	if err = pool.QueryRow(ctx, `SELECT count(*) FROM schema_migrations`).Scan(&count); err != nil {
 		t.Fatal(err)
 	}
-	if count != 53 {
-		t.Fatalf("expected 53 non-demo migrations, got %d", count)
+	expected := 0
+	for _, migration := range plan {
+		if !migration.Demo {
+			expected++
+		}
+	}
+	if count != expected {
+		t.Fatalf("expected %d non-demo migrations, got %d", expected, count)
 	}
 	// Existing LF/CRLF checksums remain accepted without rewriting their records.
 	for _, m := range plan {

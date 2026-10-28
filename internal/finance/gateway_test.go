@@ -20,7 +20,7 @@ func TestRazorpayCaptureDuplicateRefundAndSnapshot(t *testing.T) {
 		t.Fatal(err)
 	}
 	var order string
-	if err := p.QueryRow(ctx, `INSERT INTO public.orders(customer_id,merchant_id,status,total_price,delivery_address) VALUES($1,$2,'CREATED',1000,'{"latitude":34,"longitude":74}') RETURNING id`, devseed.CustomerID, devseed.RestaurantID).Scan(&order); err != nil {
+	if err := p.QueryRow(ctx, `INSERT INTO public.orders(customer_id,restaurant_id,status,total_price,delivery_address) VALUES($1,$2,'CREATED',1000,'{"latitude":34,"longitude":74}') RETURNING id`, devseed.CustomerID, devseed.RestaurantID).Scan(&order); err != nil {
 		t.Fatal(err)
 	}
 	tx, err := p.Begin(ctx)
@@ -33,7 +33,7 @@ func TestRazorpayCaptureDuplicateRefundAndSnapshot(t *testing.T) {
 	if err = tx.Commit(ctx); err != nil {
 		t.Fatal(err)
 	}
-	if _, err = p.Exec(ctx, `UPDATE public.merchants SET commission_bps=2000 WHERE id=$1`, devseed.RestaurantID); err != nil {
+	if _, err = p.Exec(ctx, `UPDATE public.restaurants SET commission_bps=2000 WHERE id=$1`, devseed.RestaurantID); err != nil {
 		t.Fatal(err)
 	}
 	var commission, total int64
@@ -82,7 +82,7 @@ func TestRazorpayUncertainCreationDoesNotDuplicate(t *testing.T) {
 		t.Fatal(err)
 	}
 	var order string
-	if err := p.QueryRow(ctx, `INSERT INTO public.orders(customer_id,merchant_id,status,total_price,delivery_address) VALUES($1,$2,'PAYMENT_PENDING',1000,'{"latitude":34,"longitude":74}') RETURNING id`, devseed.CustomerID, devseed.RestaurantID).Scan(&order); err != nil {
+	if err := p.QueryRow(ctx, `INSERT INTO public.orders(customer_id,restaurant_id,status,total_price,delivery_address) VALUES($1,$2,'PAYMENT_PENDING',1000,'{"latitude":34,"longitude":74}') RETURNING id`, devseed.CustomerID, devseed.RestaurantID).Scan(&order); err != nil {
 		t.Fatal(err)
 	}
 	tx, err := p.Begin(ctx)

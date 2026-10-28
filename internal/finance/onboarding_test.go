@@ -15,7 +15,7 @@ func TestOnboardingCaptureReplayAndReferenceIsolation(t *testing.T) {
 		t.Fatal(err)
 	}
 	var id string
-	if err := p.QueryRow(ctx, `INSERT INTO finance.onboarding_attempts(merchant_id,user_id,amount,currency,provider_id,status) VALUES($1,$2,10000,'INR','plink_onboarding','PENDING') RETURNING id`, devseed.RestaurantID, devseed.OwnerID).Scan(&id); err != nil {
+	if err := p.QueryRow(ctx, `INSERT INTO finance.onboarding_attempts(restaurant_id,user_id,amount,currency,provider_id,status) VALUES($1,$2,10000,'INR','plink_onboarding','PENDING') RETURNING id`, devseed.RestaurantID, devseed.OwnerID).Scan(&id); err != nil {
 		t.Fatal(err)
 	}
 	s := New(p)

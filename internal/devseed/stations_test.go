@@ -21,7 +21,7 @@ func TestStationRelationsAndHistory(t *testing.T) {
 	if err := p.QueryRow(ctx, `SELECT count(*) FROM public.stations`).Scan(&count); err != nil || count != 3 {
 		t.Fatalf("stations %d: %v", count, err)
 	}
-	for _, table := range []string{"delivery.offers", "delivery.delivery_assignments", "delivery.rider_earnings"} {
+	for _, table := range []string{"delivery.offers", "public.delivery_assignments", "delivery.rider_earnings"} {
 		var wrong int
 		if err := p.QueryRow(ctx, `SELECT count(*) FROM `+table+` r JOIN public.orders o ON o.id=r.order_id WHERE r.station_id IS DISTINCT FROM o.station_id OR r.station_id IS NULL`).Scan(&wrong); err != nil || wrong != 0 {
 			t.Fatalf("%s mismatched: %d %v", table, wrong, err)

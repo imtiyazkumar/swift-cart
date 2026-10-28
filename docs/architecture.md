@@ -1,21 +1,13 @@
-# Yember Core Architecture
+# Yember document architecture
 
-Yember Core is a modular monolith designed to serve as the single, shared backend platform for the entire Yember ecosystem:
-1. **Customer App**
-2. **Rider App**
-3. **Restaurant App**
-4. **Administration Web App**
+The active API is cmd/api and internal/platform. It uses only the approved 38-table schema in migrations/document. internal/contractschema validates exact table names, columns, types, identity keys and numeric foreign keys. The extracted source definitions remain in schema-contract.json.
 
-## Core Domain Modules
+The 36 documented tables cover users and authentication, saved addresses, stations, restaurants and verification/banking, global menu categories and item variants, carts/orders/history, riders and delivery assignments/locations, payment intents/captures/webhooks/refunds, registration fees, earnings/payouts/allocations, cash collections, financial transactions, reconciliation and system activity. Coupons and immutable coupon usages are the only user-approved additions.
 
-- `auth`: Unified multi-role authentication, JWT token issuance, refresh tokens, and Role-Based Access Control (RBAC).
-- `customer`: Customer profile, saved addresses, favorite restaurants, coupon verification, active order tracking, and reviews.
-- `rider`: Delivery partner profile, vehicle registration, online/offline status toggle, live GPS location updates, delivery job queue, and earnings logs.
-- `restaurant`: Store management, branch operating status, menu category & item catalog, store order dashboard, and daily sales metrics.
-- `admin`: Platform-wide analytics overview, user role management, merchant and rider onboarding approvals, and coupon management.
-- `catalog`: Shared menu categories, items, variants, modifiers, addons, and search.
-- `order`: Cart management, order creation, order lifecycle state machine, and status history.
-- `delivery`: Delivery partner assignment, vehicle management, and live locations.
-- `payments`: Payment intent abstraction and transaction processing.
-- `notifications`: Notification logging, push token registry, and event subscribers.
-- `realtime`: In-process channel hub for WebSockets and live location broadcasting.
+Each entity has a numeric internal identity and a unique public UUID. API callers use UUIDs; database joins and financial references use bigint. Order prices are stored in the documented numeric(12,2) core columns. Financial records use integer paise and INR. created_at and updated_at replace the documents' create_at and update_at spelling.
+
+Restaurant owners manage their own menus and applications. Categories are global and maintained by active Yember administrators. Customers own their addresses, carts and orders. Riders access assignments belonging to their own account. The server verifies roles, ownership, availability, service coverage, variants and prices.
+
+Menu and variant changes retain referenced historical versions; delivery-address edits create new address entities. Placed line quantities and prices, order history, financial postings, activity history and coupon usage cannot be overwritten through editing.
+
+The API no longer mounts legacy domain handlers or workers that depend on extra tables. Historical SQL and older regression/conversion sources are retained separately from the active document implementation. They are not the application schema and must not be used to add features back.

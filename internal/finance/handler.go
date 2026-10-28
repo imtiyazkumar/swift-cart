@@ -18,8 +18,39 @@ import (
 
 func Register(api *echo.Group, pool *pgxpool.Pool, cfg *config.Config, log *zap.Logger) {
 	s := New(pool)
-	partner := api.Group("/partner/finance", auth.JWTMiddleware(cfg.JWTSecret, log, pool), auth.RBACMiddleware("MERCHANT_OWNER", "DELIVERY_PARTNER"))
+	partner := api.Group("/partner/finance", auth.JWTMiddleware(cfg.JWTSecret, log, pool), auth.RBACMiddleware("RESTAURANT_OWNER", "DELIVERY_PARTNER"))
 	partner.Use(noStore)
+	partner.GET("/registration", func(c echo.Context) error {
+		return jsonQuery(c, pool, `SELECT jsonb_build_object('amount_paise',COALESCE((SELECT amount FROM finance.onboarding_attempts WHERE user_id=u.id AND status='PAID' ORDER BY created_at DESC LIMIT 1),(p.value->>'amount')::bigint),'currency',p.value->>'currency','terms',p.value->>'terms','refundable',false,'payment_status',CASE WHEN EXISTS(SELECT 1 FROM finance.onboarding_attempts WHERE user_id=u.id AND status='PAID') OR EXISTS(SELECT 1 FROM public.restaurants WHERE owner_id=u.id AND deleted_at IS NULL AND fee_payment_status='PAID') THEN 'PAID' ELSE 'DUE' END) FROM public.users u JOIN public.platform_settings p ON p.key=CASE WHEN u.role='RESTAURANT_OWNER' THEN 'onboarding_fee' ELSE 'delivery_registration_fee' END WHERE u.id=$1`, c.Get("userID"))
+	})
+	partner.GET("/cash-handovers", func(c echo.Context) error {
+		return jsonQuery(c, pool, `SELECT COALESCE(jsonb_agg(x),'[]') FROM (SELECT c.order_id,c.amount AS amount_paise,COALESCE(h.status,'COLLECTED') AS status,c.created_at FROM finance.cod_custody c JOIN finance.order_financials f ON f.order_id=c.order_id JOIN public.riders p ON p.id=c.partner_id LEFT JOIN finance.cash_handovers h ON h.order_id=c.order_id WHERE p.user_id=$1 OR f.restaurant_user=$1 ORDER BY c.created_at DESC LIMIT 100)x`, c.Get("userID"))
+	})
+	partner.POST("/cash-handovers/:id", func(c echo.Context) error {
+		var input struct {
+			Amount int64 `json:"amount_paise"`
+		}
+		if c.Bind(&input) != nil {
+			return echo.NewHTTPError(400, "invalid handover")
+		}
+		if err := s.SubmitCashHandover(c.Request().Context(), c.Get("userID").(string), c.Param("id"), input.Amount); err != nil {
+			return echo.NewHTTPError(409, err.Error())
+		}
+		return c.NoContent(204)
+	}, auth.RBACMiddleware("DELIVERY_PARTNER"))
+	partner.POST("/cash-handovers/:id/confirm", func(c echo.Context) error {
+		var input struct {
+			Amount int64 `json:"amount_paise"`
+			Accept bool  `json:"accept"`
+		}
+		if c.Bind(&input) != nil {
+			return echo.NewHTTPError(400, "invalid acknowledgement")
+		}
+		if err := s.ConfirmCashHandover(c.Request().Context(), c.Get("userID").(string), c.Param("id"), input.Amount, input.Accept); err != nil {
+			return echo.NewHTTPError(409, err.Error())
+		}
+		return c.NoContent(204)
+	}, auth.RBACMiddleware("RESTAURANT_OWNER"))
 	partner.GET("/summary", func(c echo.Context) error {
 		raw, err := s.Summary(c.Request().Context(), c.Get("userID").(string))
 		return respond(c, raw, err)
@@ -131,7 +162,8 @@ func Register(api *echo.Group, pool *pgxpool.Pool, cfg *config.Config, log *zap.
 		return jsonQuery(c, pool, `SELECT jsonb_build_object('currency','INR','collected',COALESCE((SELECT sum(amount) FROM finance.entries WHERE account='CASH' AND component='collection'),0),'commission',COALESCE((SELECT -sum(amount) FROM finance.entries WHERE account='COMMISSION'),0),'outstanding',COALESCE((SELECT -sum(amount) FROM finance.entries WHERE account='PARTNER_PAYABLE'),0),'refunds',COALESCE((SELECT sum(e.amount) FROM finance.entries e JOIN finance.journals j ON j.id=e.journal_id WHERE j.kind='REFUND' AND e.account='REFUND_EXPENSE'),0),'open_discrepancies',(SELECT count(*) FROM finance.discrepancies WHERE resolved_at IS NULL),'policy',(SELECT to_jsonb(p) FROM finance.policy p))`)
 	}, permission("READ"))
 	queries := map[string]string{
-		"onboarding-payments": `SELECT COALESCE(jsonb_agg(x),'[]') FROM (SELECT id,merchant_id,user_id,amount,currency,status,provider_id,payment_reference,created_at FROM finance.onboarding_attempts ORDER BY created_at DESC,id LIMIT 100 OFFSET $1)x`,
+		"cash-handovers":      `SELECT COALESCE(jsonb_agg(x),'[]') FROM (SELECT h.uuid AS id,c.order_id,c.amount AS amount,COALESCE(h.status,'COLLECTED') AS status,p.user_id AS agent_user_id,f.restaurant_user,COALESCE((SELECT sum(e.amount) FROM finance.entries e JOIN finance.journals j ON j.id=e.journal_id WHERE j.order_id=c.order_id AND e.account='RESTAURANT_FEE_RECEIVABLE'),0) AS fee_receivable,c.created_at FROM finance.cod_custody c JOIN finance.order_financials f ON f.order_id=c.order_id JOIN public.riders p ON p.id=c.partner_id LEFT JOIN finance.cash_handovers h ON h.order_id=c.order_id ORDER BY c.created_at DESC LIMIT 100 OFFSET $1)x`,
+		"onboarding-payments": `SELECT COALESCE(jsonb_agg(x),'[]') FROM (SELECT id,restaurant_id,delivery_agent_id,user_id,amount,currency,status,provider_id,payment_reference,created_at FROM finance.onboarding_attempts ORDER BY created_at DESC,id LIMIT 100 OFFSET $1)x`,
 		"payments":            `SELECT COALESCE(jsonb_agg(x),'[]') FROM (SELECT id,order_id,provider,amount,currency,status,provider_id,payment_reference,created_at FROM finance.payment_attempts ORDER BY created_at DESC,id LIMIT 100 OFFSET $1)x`,
 		"balances":            `SELECT COALESCE(jsonb_agg(x),'[]') FROM (SELECT u.id,u.full_name,u.role,-sum(e.amount) AS pending FROM finance.entries e JOIN public.users u ON u.id=e.user_id WHERE e.account='PARTNER_PAYABLE' GROUP BY u.id ORDER BY u.id LIMIT 100 OFFSET $1)x`,
 		"banks":               `SELECT COALESCE(jsonb_agg(x),'[]') FROM (SELECT b.id,b.user_id,u.full_name,u.role,b.last_four,b.status,b.verification_reference,b.created_at FROM finance.bank_accounts b JOIN public.users u ON u.id=b.user_id WHERE b.status IN ('PENDING','VERIFIED') ORDER BY b.created_at DESC LIMIT 100 OFFSET $1)x`,

@@ -31,7 +31,7 @@ func TestSettlementReservationApprovalAndConfirmedPayment(t *testing.T) {
 	if err := p.QueryRow(ctx, `INSERT INTO public.users(email,password_hash,role) VALUES('finance-b@test.invalid','hash','ADMIN') RETURNING id`).Scan(&b); err != nil {
 		t.Fatal(err)
 	}
-	if err := p.QueryRow(ctx, `SELECT owner_id FROM public.merchants WHERE id=$1`, devseed.RestaurantID).Scan(&user); err != nil {
+	if err := p.QueryRow(ctx, `SELECT owner_id FROM public.restaurants WHERE id=$1`, devseed.RestaurantID).Scan(&user); err != nil {
 		t.Fatal(err)
 	}
 	if err := p.QueryRow(ctx, `INSERT INTO finance.bank_accounts(user_id,ciphertext,key_id,last_four,status) VALUES($1,'data','test','1234','VERIFIED') RETURNING id`, user).Scan(&bank); err != nil {
@@ -192,7 +192,7 @@ func TestFinancePermissionsAndOwnerIsolation(t *testing.T) {
 	if rec.Code != 403 {
 		t.Fatal("ungranted admin allowed", rec.Code)
 	}
-	token, _ = auth.GenerateAccessToken(cfg.JWTSecret, devseed.OwnerID, "MERCHANT_OWNER")
+	token, _ = auth.GenerateAccessToken(cfg.JWTSecret, devseed.OwnerID, "RESTAURANT_OWNER")
 	req = httptest.NewRequest("GET", "/api/v1/partner/finance/bank", nil)
 	req.Header.Set("Authorization", "Bearer "+token)
 	rec = httptest.NewRecorder()

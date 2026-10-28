@@ -43,7 +43,7 @@ func Snapshot(ctx context.Context, tx pgx.Tx, order string, codes ...string) err
 	var bps int
 	var user string
 	var charge, rider int64
-	err := tx.QueryRow(ctx, `SELECT ROUND(o.total_price*100)::bigint,m.owner_id,m.commission_bps,p.delivery_charge,p.rider_base FROM public.orders o JOIN public.merchants m ON m.id=o.merchant_id CROSS JOIN finance.policy p WHERE o.id=$1`, order).Scan(&gross, &user, &bps, &charge, &rider)
+	err := tx.QueryRow(ctx, `SELECT ROUND(o.total_price*100)::bigint,m.owner_id,m.commission_bps,p.delivery_charge,p.rider_base FROM public.orders o JOIN public.restaurants m ON m.id=o.restaurant_id CROSS JOIN finance.policy p WHERE o.id=$1`, order).Scan(&gross, &user, &bps, &charge, &rider)
 	if err != nil {
 		return err
 	}
@@ -103,7 +103,7 @@ func Recognize(ctx context.Context, tx pgx.Tx, order string) error {
 	}
 	agent := ""
 	if rider > 0 {
-		if err = tx.QueryRow(ctx, `SELECT p.user_id FROM delivery.delivery_assignments a JOIN delivery.delivery_partners p ON p.id=a.partner_id WHERE a.order_id=$1 AND a.status='DELIVERED'`, order).Scan(&agent); err != nil {
+		if err = tx.QueryRow(ctx, `SELECT p.user_id FROM public.delivery_assignments a JOIN public.riders p ON p.id=a.partner_id WHERE a.order_id=$1 AND a.status='DELIVERED'`, order).Scan(&agent); err != nil {
 			return errors.New("delivery payee is unavailable")
 		}
 	}

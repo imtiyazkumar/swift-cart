@@ -10,7 +10,6 @@ import (
 	"os"
 	"os/signal"
 	"strings"
-	"sync"
 	"syscall"
 	"time"
 
@@ -19,27 +18,9 @@ import (
 	"github.com/labstack/echo/v4/middleware"
 
 	"github.com/imtiyazkumar/yember-core/config"
-	"github.com/imtiyazkumar/yember-core/internal/admin"
-	"github.com/imtiyazkumar/yember-core/internal/auth"
-	"github.com/imtiyazkumar/yember-core/internal/catalog"
-	"github.com/imtiyazkumar/yember-core/internal/checkout"
-	"github.com/imtiyazkumar/yember-core/internal/customer"
-	"github.com/imtiyazkumar/yember-core/internal/delivery"
-	"github.com/imtiyazkumar/yember-core/internal/dispatch"
-	"github.com/imtiyazkumar/yember-core/internal/email"
-	"github.com/imtiyazkumar/yember-core/internal/fees"
-	"github.com/imtiyazkumar/yember-core/internal/finance"
-	"github.com/imtiyazkumar/yember-core/internal/merchant"
-	"github.com/imtiyazkumar/yember-core/internal/notifications"
-	"github.com/imtiyazkumar/yember-core/internal/onboarding"
-	"github.com/imtiyazkumar/yember-core/internal/order"
-	"github.com/imtiyazkumar/yember-core/internal/partnerops"
-	"github.com/imtiyazkumar/yember-core/internal/payments"
-	"github.com/imtiyazkumar/yember-core/internal/restaurant"
-	"github.com/imtiyazkumar/yember-core/internal/rider"
-	"github.com/imtiyazkumar/yember-core/internal/stations"
+	"github.com/imtiyazkumar/yember-core/internal/contractschema"
+	"github.com/imtiyazkumar/yember-core/internal/platform"
 	"github.com/imtiyazkumar/yember-core/pkg/db"
-	"github.com/imtiyazkumar/yember-core/pkg/events"
 	"github.com/imtiyazkumar/yember-core/pkg/logger"
 	custommiddleware "github.com/imtiyazkumar/yember-core/pkg/middleware"
 )
@@ -64,7 +45,7 @@ func main() {
 	}
 	defer pg.Close()
 	schemaContext, cancelSchemaCheck := context.WithTimeout(context.Background(), 10*time.Second)
-	err = db.CheckSchema(schemaContext, pg.Pool)
+	err = contractschema.Validate(schemaContext, pg.Pool)
 	cancelSchemaCheck()
 	if err != nil {
 		logg.Sugar().Fatalw("database startup check failed", "error", err)
@@ -123,71 +104,19 @@ func main() {
 	e.Use(middleware.Secure())
 	e.Use(middleware.TimeoutWithConfig(middleware.TimeoutConfig{Timeout: 30 * time.Second}))
 	e.Use(custommiddleware.RequestLogger(logg))
-	e.Use(custommiddleware.DistributedRateLimiter(pg.Pool, "api", 600))
+	e.Use(middleware.RateLimiter(middleware.NewRateLimiterMemoryStore(20)))
 
 	// Health & Status endpoints
 	e.GET("/", homeHandler)
 	e.GET("/healthz", healthHandler)
 	e.GET("/readyz", readyHandler(pg))
 
-	// API version group
-	api := e.Group("/api/v1")
-
-	// Register Auth routes
-	auth.RegisterRoutes(e, cfg, logg, pg.Pool)
-	stations.Register(api, pg.Pool, cfg, logg)
-	onboarding.Register(api, pg.Pool, cfg, logg)
-	partnerops.Register(api, pg.Pool, cfg, logg)
-	fees.Register(api, pg.Pool, cfg, logg)
-	finance.Register(api, pg.Pool, cfg, logg)
-	notifications.RegisterPush(api, pg.Pool, cfg, logg)
-	restaurant.RegisterImages(api, pg.Pool, cfg, logg)
-	dispatch.RegisterSettings(api, pg.Pool, cfg, logg)
-
-	// Initialize domain services
-	eventBus := events.NewInMemoryBus()
-	customerSvc := customer.NewService(customer.NewPostgresRepo(pg.Pool, logg))
-	riderSvc := rider.NewService(rider.NewPostgresRepo(pg.Pool, logg))
-	restaurantSvc := restaurant.NewService(restaurant.NewPostgresRepo(pg.Pool, logg))
-	adminSvc := admin.NewService(admin.NewPostgresRepo(pg.Pool, logg))
-	merchantSvc := merchant.NewService(merchant.NewPostgresRepo(pg.Pool, logg))
-	orderSvc := order.NewService(order.NewPostgresRepo(pg.Pool, logg))
-	catalogSvc := catalog.NewService(catalog.NewPostgresRepo(pg.Pool, logg))
-	deliverySvc := delivery.NewService(delivery.NewPostgresRepo(pg.Pool, logg))
-	paymentSvc := payments.NewService(payments.NewPostgresRepo(pg.Pool, logg))
-	notificationSvc := notifications.NewService(notifications.NewPostgresRepo(pg.Pool, logg), eventBus)
-	notificationSvc.SubscribeOrderEvents()
-	workerContext, stopWorkers := context.WithCancel(context.Background())
-	defer stopWorkers()
-	var workers sync.WaitGroup
-	runWorker := func(run func()) { workers.Add(1); go func() { defer workers.Done(); run() }() }
-
-	runWorker(func() { email.Run(workerContext, pg.Pool, cfg, logg) })
-	runWorker(func() { dispatch.Run(workerContext, pg.Pool, logg) })
-	runWorker(func() { finance.Run(workerContext, finance.New(pg.Pool), logg) })
-	runWorker(func() { notifications.RunPush(workerContext, pg.Pool, logg) })
-	runWorker(func() { notifications.RunSMS(workerContext, pg.Pool, logg) })
-	runWorker(func() { finance.RunMaintenance(workerContext, finance.New(pg.Pool), logg) })
-
-	// Register Ecosystem Persona Routes
-	customerGroup := api.Group("/customer", auth.JWTMiddleware(cfg.JWTSecret, logg, pg.Pool), auth.RBACMiddleware("CUSTOMER"))
-	riderGroup := api.Group("/rider", auth.JWTMiddleware(cfg.JWTSecret, logg, pg.Pool), auth.RBACMiddleware("DELIVERY_PARTNER"))
-	restaurantGroup := api.Group("/restaurant", auth.JWTMiddleware(cfg.JWTSecret, logg, pg.Pool), auth.RBACMiddleware("MERCHANT_OWNER"))
-	adminGroup := api.Group("/admin", auth.JWTMiddleware(cfg.JWTSecret, logg, pg.Pool), auth.RBACMiddleware("ADMIN"))
-	customer.RegisterRoutes(customerGroup, cfg, logg, customerSvc)
-	checkout.RegisterRoutes(customerGroup, checkout.New(pg.Pool))
-	partnerops.RegisterCustomerSupport(customerGroup, pg.Pool)
-	rider.RegisterCustomerProof(customerGroup, pg.Pool)
-	rider.RegisterRoutes(riderGroup, cfg, logg, riderSvc)
-	restaurant.RegisterRoutes(restaurantGroup, cfg, logg, restaurantSvc)
-	admin.RegisterRoutes(adminGroup, cfg, logg, adminSvc)
-
-	// Legacy & Shared domain routes
-	merchant.RegisterRoutes(api.Group("/merchant", auth.JWTMiddleware(cfg.JWTSecret, logg, pg.Pool), auth.RBACMiddleware("ADMIN")), cfg, logg, merchantSvc)
-	order.RegisterRoutes(api.Group("/order", auth.JWTMiddleware(cfg.JWTSecret, logg, pg.Pool)), cfg, logg, orderSvc)
-	catalog.RegisterRoutes(api.Group("/catalog", auth.JWTMiddleware(cfg.JWTSecret, logg, pg.Pool)), cfg, logg, catalogSvc)
-	delivery.RegisterRoutes(api.Group("/delivery", auth.JWTMiddleware(cfg.JWTSecret, logg, pg.Pool), auth.RBACMiddleware("ADMIN")), deliverySvc)
-	payments.RegisterRoutes(api.Group("/payments", auth.JWTMiddleware(cfg.JWTSecret, logg, pg.Pool), auth.RBACMiddleware("CUSTOMER")), paymentSvc)
+	// All public routes use the document schema. No legacy handlers, workers or
+	// SQL-backed limiter can recreate or depend on removed tables.
+	service := &platform.Service{DB: pg.Pool, JWTSecret: cfg.JWTSecret, CookieSecure: cfg.AdminCookieSecure, AllowedOrigins: strings.Split(cfg.CORSAllowedOrigins, ",")}
+	service.Gateway = platform.GatewayFromEnv()
+	service.SendOTP = platform.SendOTPFromEnv()
+	service.Register(e)
 
 	// Start server with graceful shutdown
 	go func() {
@@ -203,19 +132,11 @@ func main() {
 	signal.Notify(quit, os.Interrupt, syscall.SIGTERM)
 	<-quit
 	logg.Info("shutdown initiated")
-	stopWorkers()
 
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 	if err := e.Shutdown(ctx); err != nil {
 		logg.Sugar().Errorw("shutdown error", "error", err)
-	}
-	workerDone := make(chan struct{})
-	go func() { workers.Wait(); close(workerDone) }()
-	select {
-	case <-workerDone:
-	case <-ctx.Done():
-		logg.Warn("worker shutdown deadline reached")
 	}
 	logg.Info("Yember Core server gracefully stopped")
 }

@@ -26,10 +26,10 @@ func Station(t *testing.T, pool *pgxpool.Pool) {
 
 func PartnerLocation(t *testing.T, pool *pgxpool.Pool, id string) {
 	t.Helper()
-	if _, err := pool.Exec(context.Background(), `INSERT INTO delivery.live_locations(partner_id,latitude,longitude,accuracy_m,observed_at,permission_granted) VALUES($1,34,74,5,now(),true)`, id); err != nil {
+	if _, err := pool.Exec(context.Background(), `INSERT INTO public.rider_locations(partner_id,latitude,longitude,accuracy_m,observed_at,permission_granted) VALUES($1,34,74,5,now(),true)`, id); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := pool.Exec(context.Background(), `UPDATE delivery.delivery_partners SET status='ONLINE' WHERE id=$1`, id); err != nil {
+	if _, err := pool.Exec(context.Background(), `UPDATE public.riders SET status='ONLINE' WHERE id=$1`, id); err != nil {
 		t.Fatal(err)
 	}
 }

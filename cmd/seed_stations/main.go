@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"github.com/imtiyazkumar/yember-core/internal/contractschema"
 	"github.com/imtiyazkumar/yember-core/internal/devseed"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/joho/godotenv"
@@ -17,11 +18,14 @@ func main() {
 	}
 	p, err := pgxpool.New(context.Background(), dsn)
 	if err != nil {
-		log.Fatal("could not open local database")
+		log.Fatal("database configuration failed")
 	}
 	defer p.Close()
-	if err = devseed.SeedStations(context.Background(), p); err != nil {
+	if err = contractschema.Validate(context.Background(), p); err != nil {
 		log.Fatal(err)
 	}
-	log.Print("Three local stations ready; known demo station relations repaired. Accounts preserved.")
+	if err = devseed.SeedDocumentStations(context.Background(), p); err != nil {
+		log.Fatal(err)
+	}
+	log.Print("Document service station ready. Existing records preserved.")
 }

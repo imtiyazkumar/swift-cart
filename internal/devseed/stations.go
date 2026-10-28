@@ -24,7 +24,7 @@ func SeedStations(ctx context.Context, pool *pgxpool.Pool) error {
 			}
 		}
 	}
-	for _, profile := range []struct{ kind, table, id, user string }{{"restaurant", "public.merchants", RestaurantID, OwnerID}, {"delivery", "delivery.delivery_partners", PartnerID, DeliveryUserID}} {
+	for _, profile := range []struct{ kind, table, id, user string }{{"restaurant", "public.restaurants", RestaurantID, OwnerID}, {"delivery", "public.riders", PartnerID, DeliveryUserID}} {
 		var missing bool
 		if err = tx.QueryRow(ctx, `SELECT EXISTS(SELECT 1 FROM `+profile.table+` WHERE id=$1 AND station_id IS NULL)`, profile.id).Scan(&missing); err != nil {
 			return err
@@ -55,7 +55,7 @@ func SeedStations(ctx context.Context, pool *pgxpool.Pool) error {
 	}
 	for i := 0; i < 10; i++ {
 		id := fmt.Sprintf("10000000-0000-4000-a000-%012d", 100+i)
-		if _, err = tx.Exec(ctx, `UPDATE public.orders SET station_id='10000000-0000-4000-a000-000000000080',delivery_address=delivery_address||'{"latitude":34,"longitude":74}'::jsonb WHERE id=$1 AND merchant_id=$2 AND customer_id=$3 AND station_id IS NULL AND delivery_address->>'address_line1'='12 Local Test Street'`, id, RestaurantID, CustomerID); err != nil {
+		if _, err = tx.Exec(ctx, `UPDATE public.orders SET station_id='10000000-0000-4000-a000-000000000080',delivery_address=delivery_address||'{"latitude":34,"longitude":74}'::jsonb WHERE id=$1 AND restaurant_id=$2 AND customer_id=$3 AND station_id IS NULL AND delivery_address->>'address_line1'='12 Local Test Street'`, id, RestaurantID, CustomerID); err != nil {
 			return err
 		}
 	}
