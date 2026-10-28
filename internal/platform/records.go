@@ -137,7 +137,7 @@ func fieldString(data map[string]any, key string) string {
 func (s *Service) registerAdmin(group *echo.Group) {
 	admin := group.Group("/admin", roles("ADMIN"))
 	admin.GET("/dashboard/stats", func(c echo.Context) error {
-		return s.one(c, `SELECT jsonb_build_object('users',(SELECT count(*) FROM users WHERE deleted_at IS NULL),'restaurants',(SELECT count(*) FROM restaurants WHERE deleted_at IS NULL),'riders',(SELECT count(*) FROM riders WHERE deleted_at IS NULL),'orders',(SELECT count(*) FROM orders WHERE deleted_at IS NULL),'pending_approvals',(SELECT count(*) FROM restaurants WHERE status='PENDING' AND deleted_at IS NULL)+(SELECT count(*) FROM riders WHERE verification_status='PENDING' AND deleted_at IS NULL),'payment_exceptions',(SELECT count(*) FROM reconciliation_runs WHERE status='EXCEPTIONS'))`)
+		return s.one(c, `SELECT jsonb_build_object('users',(SELECT count(*) FROM users WHERE deleted_at IS NULL),'restaurants',(SELECT count(*) FROM restaurants WHERE deleted_at IS NULL),'riders',(SELECT count(*) FROM riders WHERE deleted_at IS NULL),'orders',(SELECT count(*) FROM orders WHERE deleted_at IS NULL),'stations',(SELECT count(*) FROM stations WHERE deleted_at IS NULL),'pending_approvals',(SELECT count(*) FROM restaurants WHERE status='PENDING' AND deleted_at IS NULL)+(SELECT count(*) FROM riders WHERE verification_status='PENDING' AND deleted_at IS NULL),'payment_exceptions',(SELECT count(*) FROM reconciliation_runs WHERE status='EXCEPTIONS'))`)
 	})
 	admin.GET("/contract", func(c echo.Context) error {
 		type resource struct {
