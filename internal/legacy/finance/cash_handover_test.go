@@ -2,7 +2,7 @@ package finance
 
 import (
 	"context"
-	"github.com/imtiyazkumar/yember-core/internal/devseed"
+	"github.com/imtiyazkumar/yember-core/internal/legacy/devseed"
 	"github.com/imtiyazkumar/yember-core/internal/testdb"
 	"testing"
 )

@@ -18,18 +18,9 @@ type Config struct {
 	// Log level (debug, info, warn, error)
 	LogLevel string `envconfig:"LOG_LEVEL" default:"info"`
 	// Port for the HTTP server
-	Port                 string `envconfig:"PORT" default:"8080"`
-	SMTPHost             string `envconfig:"SMTP_HOST"`
-	SMTPPort             string `envconfig:"SMTP_PORT" default:"587"`
-	SMTPUsername         string `envconfig:"SMTP_USERNAME"`
-	SMTPPassword         string `envconfig:"SMTP_PASSWORD"`
-	SMTPFrom             string `envconfig:"SMTP_FROM"`
-	PasswordResetURL     string `envconfig:"PASSWORD_RESET_URL" default:"yember://auth/reset-password"`
-	ResendAPIKey         string `envconfig:"RESEND_API_KEY"`
-	EmailFrom            string `envconfig:"EMAIL_FROM"`
-	EmailDeliveryEnabled bool   `envconfig:"EMAIL_DELIVERY_ENABLED" default:"false"`
-	CORSAllowedOrigins   string `envconfig:"CORS_ALLOWED_ORIGINS" default:"http://localhost:5173,http://127.0.0.1:5173,http://localhost:8081,http://localhost:8082,http://localhost:8083"`
-	AdminCookieSecure    bool   `envconfig:"ADMIN_COOKIE_SECURE" default:"true"`
+	Port               string `envconfig:"PORT" default:"8080"`
+	CORSAllowedOrigins string `envconfig:"CORS_ALLOWED_ORIGINS" default:"http://localhost:5173,http://127.0.0.1:5173,http://localhost:8081,http://localhost:8082,http://localhost:8083"`
+	AdminCookieSecure  bool   `envconfig:"ADMIN_COOKIE_SECURE" default:"true"`
 }
 
 // Load reads environment variables into a Config struct.

@@ -3,8 +3,8 @@ package finance
 import (
 	"encoding/csv"
 	"encoding/json"
-	"github.com/imtiyazkumar/yember-core/config"
-	"github.com/imtiyazkumar/yember-core/internal/auth"
+	"github.com/imtiyazkumar/yember-core/internal/legacy/auth"
+	"github.com/imtiyazkumar/yember-core/internal/legacy/config"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/labstack/echo/v4"
 	"go.uber.org/zap"

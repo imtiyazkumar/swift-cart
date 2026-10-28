@@ -45,3 +45,6 @@ docs/project-flow.md
 *.log
 *.tmp
 *.temp
+
+# Air hot-reload output
+/tmp/

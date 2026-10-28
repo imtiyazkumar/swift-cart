@@ -1,6 +1,6 @@
 # Document database schema
 
-The application installs exactly **38 tables in public**: the 36 tables from the two supplied architecture documents, plus the explicitly requested coupons and coupon_usages.
+The application installs exactly **38 tables in document-based PostgreSQL schemas**: the 36 tables from the two supplied architecture documents, plus the explicitly requested coupons and coupon_usages.
 
 The active installation is ordered and contains only final definitions:
 

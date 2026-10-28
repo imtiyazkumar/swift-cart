@@ -3,9 +3,9 @@ package finance
 import (
 	"context"
 	"encoding/json"
-	"github.com/imtiyazkumar/yember-core/config"
-	"github.com/imtiyazkumar/yember-core/internal/auth"
-	"github.com/imtiyazkumar/yember-core/internal/devseed"
+	"github.com/imtiyazkumar/yember-core/internal/legacy/auth"
+	"github.com/imtiyazkumar/yember-core/internal/legacy/config"
+	"github.com/imtiyazkumar/yember-core/internal/legacy/devseed"
 	"github.com/imtiyazkumar/yember-core/internal/testdb"
 	"github.com/labstack/echo/v4"
 	"go.uber.org/zap"

@@ -6,3 +6,6 @@
 yember-core-api
 *.exe
 *.log
+
+# Air and local tool output
+tmp/

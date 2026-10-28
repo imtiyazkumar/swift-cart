@@ -11,3 +11,6 @@ Restaurant owners manage their own menus and applications. Categories are global
 Menu and variant changes retain referenced historical versions; delivery-address edits create new address entities. Placed line quantities and prices, order history, financial postings, activity history and coupon usage cannot be overwritten through editing.
 
 The API no longer mounts legacy domain handlers or workers that depend on extra tables. Historical SQL and older regression/conversion sources are retained separately from the active document implementation. They are not the application schema and must not be used to add features back.
+
+Historical conversion support is isolated in `internal/legacy`; current commands
+do not depend on it. See `internal/legacy/README.md` for the reason it is retained.

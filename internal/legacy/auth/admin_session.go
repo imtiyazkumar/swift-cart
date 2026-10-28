@@ -5,7 +5,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/imtiyazkumar/yember-core/config"
+	"github.com/imtiyazkumar/yember-core/internal/legacy/config"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/labstack/echo/v4"
 )

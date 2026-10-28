@@ -6,7 +6,7 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
-	"github.com/imtiyazkumar/yember-core/internal/devseed"
+	"github.com/imtiyazkumar/yember-core/internal/legacy/devseed"
 	"github.com/imtiyazkumar/yember-core/internal/testdb"
 	"net/http"
 	"net/http/httptest"

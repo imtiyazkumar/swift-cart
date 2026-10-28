@@ -3,8 +3,8 @@ package contractschema
 import (
 	"context"
 	"encoding/json"
-	"github.com/imtiyazkumar/yember-core/internal/devseed"
-	"github.com/imtiyazkumar/yember-core/internal/finance"
+	"github.com/imtiyazkumar/yember-core/internal/legacy/devseed"
+	"github.com/imtiyazkumar/yember-core/internal/legacy/finance"
 	"github.com/imtiyazkumar/yember-core/internal/testdb"
 	"testing"
 )

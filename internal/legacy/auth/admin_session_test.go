@@ -6,7 +6,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/imtiyazkumar/yember-core/config"
+	"github.com/imtiyazkumar/yember-core/internal/legacy/config"
 	"github.com/imtiyazkumar/yember-core/internal/testdb"
 	"github.com/labstack/echo/v4"
 	"go.uber.org/zap"

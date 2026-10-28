@@ -1,4 +1,4 @@
-package custommiddleware
+package auth
 
 import (
 	"github.com/jackc/pgx/v5/pgxpool"

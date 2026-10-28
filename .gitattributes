@@ -1,3 +1,7 @@
-# Preserve historical migration SQL bytes and checksums across platforms.
-migrations/*.sql -text
-migrations/manifest.json text eol=lf
+# Historical SQL must retain exact bytes for manifest checksums.
+migrations/legacy/*.sql -text
+migrations/legacy/manifest.json text eol=lf
+# The active baseline and contract are canonical LF text on every platform.
+migrations/document/*.sql text eol=lf
+internal/contractschema/contract.json text eol=lf
+docs/schema-contract.json text eol=lf

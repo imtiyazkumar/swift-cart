@@ -16,8 +16,13 @@ The four local emails are admin@yember.test, customer@yember.test, restaurant@ye
 
 From yember-web, run npm run dev. Defaults are API http://127.0.0.1:8080 and administrator web http://127.0.0.1:5173. The web development server proxies /api to Core.
 
-The integration test helper reads .env.test for PostgreSQL connection credentials and creates isolated disposable databases. Its historical-source databases deliberately exercise legacy conversion; they are not application targets. Existing nonempty databases are never reset by the strict installer.
+The integration test helper uses POSTGRES_DSN from the process, with the private Core .env as fallback, and creates isolated disposable databases. The local runner selects .env.test explicitly when invoked with -Environment test. Its historical-source databases deliberately exercise legacy conversion; they are not application targets. Existing nonempty databases are never reset by the strict installer.
 
 Backend integration verification uses YEMBER_INTEGRATION=1 with go test ./... -count=1. The web uses npm test and npm run build. The mobile workspace uses npm run typecheck, npm test and npm run lint.
 
 On Windows, use npm.cmd if PowerShell blocks npm.ps1. A writable workspace GOCACHE may be needed when the default Go cache is restricted.
+
+Environment ownership is per application: Core owns backend credentials; the web
+app owns its proxy/port profiles; each Expo app owns its public API profiles.
+Unused root mobile env copies and pre-local backups have been removed. Active
+development and test profiles remain separate.

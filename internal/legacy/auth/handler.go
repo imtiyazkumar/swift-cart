@@ -2,12 +2,11 @@ package auth
 
 import (
 	"errors"
-	custommiddleware "github.com/imtiyazkumar/yember-core/pkg/middleware"
 	"net/http"
 	"net/mail"
 	"strings"
 
-	"github.com/imtiyazkumar/yember-core/config"
+	"github.com/imtiyazkumar/yember-core/internal/legacy/config"
 	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/labstack/echo/v4"
@@ -17,7 +16,7 @@ import (
 // RegisterRoutes registers auth endpoints.
 func RegisterRoutes(e *echo.Echo, cfg *config.Config, log *zap.Logger, dbPool *pgxpool.Pool) {
 	g := e.Group("/api/v1/auth")
-	g.Use(custommiddleware.DistributedRateLimiter(dbPool, "authentication", 20))
+	g.Use(DistributedRateLimiter(dbPool, "authentication", 20))
 	registerAdminSessions(g, cfg, dbPool)
 	g.POST("/signup", SignUp(cfg, log, dbPool))
 	g.POST("/partner-signup", PartnerSignup(dbPool))
