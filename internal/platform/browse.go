@@ -113,7 +113,7 @@ func (s *Service) registerBrowse(api *echo.Group) {
 		return commit(c, tx)
 	})
 	partner.GET("/overview", func(c echo.Context) error {
-		return s.one(c, `WITH my_orders AS (SELECT o.* FROM orders o JOIN restaurants r ON r.id=o.restaurant_id WHERE ($1='RESTAURANT_OWNER' AND r.owner_user_id=$2) OR ($1='DELIVERY_PARTNER' AND EXISTS(SELECT 1 FROM delivery_assignments a JOIN riders rider ON rider.id=a.rider_id WHERE a.order_id=o.id AND rider.user_id=$2 AND a.deleted_at IS NULL))) SELECT jsonb_build_object('total_orders',count(*),'active_orders',count(*) FILTER(WHERE status NOT IN ('DELIVERED','CANCELLED','REJECTED')),'completed_orders',count(*) FILTER(WHERE status='DELIVERED'),'today_orders',count(*) FILTER(WHERE created_at::date=current_date)) FROM my_orders`, person(c).Role, person(c).ID)
+		return s.one(c, `WITH my_orders AS (SELECT o.* FROM orders o JOIN restaurants r ON r.id=o.restaurant_id WHERE ($1='RESTAURANT_OWNER' AND r.owner_user_id=$2) OR ($1='DELIVERY_PARTNER' AND EXISTS(SELECT 1 FROM delivery_assignments a JOIN riders rider ON rider.id=a.rider_id WHERE a.order_id=o.id AND rider.user_id=$2 AND a.status NOT IN ('REJECTED','CANCELLED') AND a.deleted_at IS NULL))) SELECT jsonb_build_object('total_orders',count(*),'active_orders',count(*) FILTER(WHERE status NOT IN ('DELIVERED','CANCELLED','REJECTED','REFUNDED')),'completed_orders',count(*) FILTER(WHERE status='DELIVERED'),'today_orders',count(*) FILTER(WHERE created_at::date=current_date)) FROM my_orders`, person(c).Role, person(c).ID)
 	})
 	partner.GET("/finance/summary", func(c echo.Context) error {
 		if person(c).Role == "RESTAURANT_OWNER" {

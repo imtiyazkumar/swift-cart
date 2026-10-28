@@ -19,3 +19,11 @@ suite's Expo server on port 8085. Set `YEMBER_INTEGRATION=1` and
 `YEMBER_RESTAURANT_E2E=1`, then run
 `go test ./internal/platform -run '^TestRestaurantBrowser$' -count=1 -timeout 15m -v`.
 See [browser coverage and prerequisites](../../yember-app/docs/restaurant-testing.md).
+
+The companion `TestDeliveryBrowser` harness uses `YEMBER_DELIVERY_E2E=1` and port
+8086. It covers browser location permission/recovery, stopping tracking on
+offline/sign-out, cash and prepaid completion, assignment decline, onboarding,
+history, account changes and failure recovery. See
+[delivery browser coverage](../../yember-app/docs/delivery-testing.md).
+Order responses retain the canonical `delivery_fee` in rupees and provide
+`delivery_fee_paise` for financial display, alongside paise totals and item prices.
