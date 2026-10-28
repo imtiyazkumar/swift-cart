@@ -11,3 +11,11 @@ The customer screens use live serviceable restaurants, menus/variants, saved add
 Core stores all relationships numerically and the apps use UUID references. Menu prices and variant deltas are displayed in INR; financial transport values use paise. Cart writes fetch the server's current cart instead of assuming a response body or pricing locally.
 
 Run npm run typecheck, npm test and npm run lint at the mobile workspace root. Device payment UI, real SMS delivery and Android/iOS native end-to-end flows require the corresponding configured services/devices; passing transport tests does not certify those flows.
+
+The opt-in `TestRestaurantBrowser` integration harness runs the restaurant app's
+Playwright suite against the real API in a disposable PostgreSQL database and
+temporary upload directory. It starts an ephemeral API listener and the browser
+suite's Expo server on port 8085. Set `YEMBER_INTEGRATION=1` and
+`YEMBER_RESTAURANT_E2E=1`, then run
+`go test ./internal/platform -run '^TestRestaurantBrowser$' -count=1 -timeout 15m -v`.
+See [browser coverage and prerequisites](../../yember-app/docs/restaurant-testing.md).
