@@ -12,4 +12,6 @@ The administrator web uses full-page document workspaces and editors. Unsupporte
 
 Validation includes backend PostgreSQL integration tests, exact schema tests, preservation/rollback tests, cash and provider workflows, administrator-only coupon lifecycle, web component/API tests and production build, and all mobile typechecks/transport tests/Expo lint.
 
-Limitations: browser visual verification was blocked by a Chrome computer-use approval timeout. Real Razorpay, real SMS/bank activity and Android/iOS device UI end-to-end flows have not been certified by the local tests. Nonempty legacy conversion must be completed and verified for each such installation before switching it.
+Browser visual verification was completed in a separate Playwright profile after native Chrome app access timed out. See the web modernization notes for the 38-list and responsive coverage.
+
+Limitations: Real Razorpay, real SMS/bank activity and Android/iOS device UI end-to-end flows have not been certified by the local tests. Nonempty legacy conversion must be completed and verified for each such installation before switching it.
